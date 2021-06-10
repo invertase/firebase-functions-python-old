@@ -1,11 +1,17 @@
 import importlib
 import importlib.util
 import inspect
+import os
 import sys
 
 
-def get_exports(module_name):
-  module = importlib.import_module(module_name)
+def get_exports(file_path):
+  basename = os.path.basename(file_path)
+  modname = os.path.splitext(basename)[0]
+  spec = importlib.util.spec_from_file_location(modname, file_path)
+  module = importlib.util.module_from_spec(spec)
+  spec.loader.exec_module(module)
+
   funcs = inspect.getmembers(module, inspect.isfunction)
   exports = {}
   for func in funcs:
@@ -33,7 +39,7 @@ def generate_http_server(module_name, exports):
 if __name__ == '__main__':
   args = sys.argv[1:]
   if len(args) != 1:
-    print('Usage: python codegen.py <ModuleName>')
+    print('Usage: python codegen.py <PathToModule>')
     sys.exit(1)
 
   exports = get_exports(args[0])

@@ -38,7 +38,7 @@
   `app.py` file.
 
  ```
- python codegen.py sample > app.py
+ python ./firebase_functions/codegen.py ./sample.py > app.py
  ```
 
  * Start the Flask server to serve the generated entrypoint.
