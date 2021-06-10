@@ -30,7 +30,7 @@
 
 # Running the example
 
-* `functions.py` contains the experimental Functions SDK for Python.
+* `firebase_functions` contains the experimental Functions SDK for Python.
 
 * `sample.py` contains some sample user code written using the Functions SDK.
 
@@ -44,23 +44,29 @@
  * Start the Flask server to serve the generated entrypoint.
 
   ```
-  flask run
+  gunicorn -b :8080 app:app
+  ```
+
+* Start a separate server to serve the `backend.yaml`.
+
+  ```
+  gunicorn -b :8081 app:backend_yaml
   ```
 
 * To trigger the HTTP function:
 
  ```
- curl localhost:5000/http_function
+ curl localhost:8080/http_function
  ```
 
 * To trigger the PubSub function:
 
  ```
- curl -X POST -d '{"uid": "alice"}' localhost:5000/pubsub_function
+ curl -X POST -d '{"uid": "alice"}' localhost:8080/pubsub_function
  ```
 
 * To get the discovery yaml (currently served on the same port):
 
  ```
- curl localhost:5000/backend.yaml
+ curl localhost:8081/backend.yaml
  ```
