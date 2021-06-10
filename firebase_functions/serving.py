@@ -63,13 +63,16 @@ def serve_triggers(triggers):
     if is_http_trigger(metadata):
       app.add_url_rule(
         f'/{name}', endpoint=name, view_func=wrap_http_trigger(trig), methods=_ALLOWED_METHODS)
-      print(f'Serving http trigger {name} at /{name}')
     elif is_pubsub_trigger(metadata):
       app.add_url_rule(
         f'/{name}', endpoint=name, view_func=wrap_pubsub_trigger(trig), methods=['POST'])
-      print(f'Serving pubsub trigger {name} at /{name}')
     else:
       raise ValueError('Unknown trigger type')
 
-  app.add_url_rule('/backend.yaml', endpoint='backend.json', view_func=wrap_backend_yaml(triggers))
+  return app
+
+
+def serve_backend_yaml(triggers):
+  app = Flask(__name__)
+  app.add_url_rule('/backend.yaml', endpoint='backend.yaml', view_func=wrap_backend_yaml(triggers))
   return app

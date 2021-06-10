@@ -1,6 +1,8 @@
 import importlib
+import importlib.util
 import inspect
 import sys
+
 
 def get_exports(module_name):
   module = importlib.import_module(module_name)
@@ -14,7 +16,7 @@ def get_exports(module_name):
 
 
 def generate_http_server(module_name, exports):
-  print('import serving')
+  print('from firebase_functions import serving')
   print()
   print(f'import {module_name} as _alias')
   print()
@@ -23,6 +25,8 @@ def generate_http_server(module_name, exports):
     print(f'triggers["{name}"] = _alias.{name}')
   print()
   print('app = serving.serve_triggers(triggers)')
+  print()
+  print('backend_yaml = serving.serve_backend_yaml(triggers)')
   print()
 
 

@@ -1,4 +1,4 @@
-import functions
+from firebase_functions import functions
 
 @functions.https(memory_mb=256)
 def http_function(request):
