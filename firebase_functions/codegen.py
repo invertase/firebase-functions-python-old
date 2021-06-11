@@ -35,7 +35,7 @@ def generate_http_server(module_name, exports):
   print()
   print('app = serving.serve_triggers(triggers)')
   print()
-  print('backend_yaml = serving.serve_backend_yaml(triggers)')
+  print('admin = serving.serve_admin(triggers)')
   print()
 
 

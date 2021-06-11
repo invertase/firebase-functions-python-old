@@ -52,7 +52,7 @@ def is_http_trigger(metadata):
 
 def is_pubsub_trigger(metadata):
   trigger = metadata['trigger']
-  return trigger.get('eventType') == 'google.cloud.pubsub.topic.v1.messagePublished'
+  return trigger.get('eventType') == 'google.pubsub.topic.publish'
 
 
 def serve_triggers(triggers):
@@ -72,7 +72,7 @@ def serve_triggers(triggers):
   return app
 
 
-def serve_backend_yaml(triggers):
+def serve_admin(triggers):
   app = Flask(__name__)
   app.add_url_rule('/backend.yaml', endpoint='backend.yaml', view_func=wrap_backend_yaml(triggers))
   return app
