@@ -27,7 +27,7 @@ def https(_func=None, *, min_instances=None, max_instances=None, memory_mb=None)
 
 
 def pubsub(*, topic, min_instances=None):
-  project = os.get('GCLOUD_PROJECT')
+  project = os.environ.get('GCLOUD_PROJECT')
   metadata = {
     'apiVersion': 1,
     'minInstances': min_instances,
