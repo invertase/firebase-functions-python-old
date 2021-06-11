@@ -1,4 +1,5 @@
 import functools
+import os
 
 
 def https(_func=None, *, min_instances=None, max_instances=None, memory_mb=None):
@@ -34,7 +35,7 @@ def pubsub(*, topic, min_instances=None):
       'eventFilters': [
         {
           'attribute': 'resource',
-          'value': topic,
+          'value': f'projects/{os.environ['GCLOUD_PROJECT']}/topics/{topic}',
         },
       ]
     },
