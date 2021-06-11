@@ -33,12 +33,9 @@ def pubsub(*, topic, min_instances=None):
     'minInstances': min_instances,
     'trigger': {
       'eventType': 'google.pubsub.topic.publish',
-      'eventFilters': [
-        {
-          'attribute': 'resource',
-          'value': f'projects/{project}/topics/{topic}',
-        },
-      ]
+      'eventFilters': {
+        'resource': f'projects/{project}/topics/{topic}',
+      }
     },
   }
 
