@@ -3,7 +3,7 @@ import functools
 
 def https(_func=None, *, min_instances=None, max_instances=None, memory_mb=None):
   metadata = {
-    'apiVersion': 2,
+    'apiVersion': 1,
     'trigger': {},
     'minInstances': min_instances,
     'maxInstances': max_instances,
@@ -27,10 +27,10 @@ def https(_func=None, *, min_instances=None, max_instances=None, memory_mb=None)
 
 def pubsub(*, topic, min_instances=None):
   metadata = {
-    'apiVersion': 2,
+    'apiVersion': 1,
     'minInstances': min_instances,
     'trigger': {
-      'eventType': 'google.cloud.pubsub.topic.v1.messagePublished',
+      'eventType': 'google.pubsub.topic.publish'
       'eventFilters': [
         {
           'attribute': 'resource',
