@@ -5,9 +5,12 @@ import os
 import sys
 
 
-def get_exports(file_path):
+def get_module_nanme(file_path):
   basename = os.path.basename(file_path)
-  modname = os.path.splitext(basename)[0]
+  return os.path.splitext(basename)[0]
+
+def get_exports(file_path):
+  modname = get_module_nanme(file_path)
   spec = importlib.util.spec_from_file_location(modname, file_path)
   module = importlib.util.module_from_spec(spec)
   spec.loader.exec_module(module)
@@ -42,9 +45,11 @@ if __name__ == '__main__':
     print('Usage: python codegen.py <PathToModule>')
     sys.exit(1)
 
-  exports = get_exports(args[0])
+  file_path = args[0]
+  exports = get_exports(file_path)
   if not exports:
     print('No exports in module')
     sys.exit(1)
 
-  generate_http_server('sample', exports)
+  mod_name = get_module_nanme(file_path)
+  generate_http_server(mod_name, exports)
