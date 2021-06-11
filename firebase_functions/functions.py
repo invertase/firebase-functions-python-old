@@ -30,7 +30,7 @@ def pubsub(*, topic, min_instances=None):
     'apiVersion': 1,
     'minInstances': min_instances,
     'trigger': {
-      'eventType': 'google.pubsub.topic.publish'
+      'eventType': 'google.pubsub.topic.publish',
       'eventFilters': [
         {
           'attribute': 'resource',
