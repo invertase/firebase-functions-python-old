@@ -27,6 +27,7 @@ def https(_func=None, *, min_instances=None, max_instances=None, memory_mb=None)
 
 
 def pubsub(*, topic, min_instances=None):
+  project = os.environ['GCLOUD_PROJECT']
   metadata = {
     'apiVersion': 1,
     'minInstances': min_instances,
@@ -35,7 +36,7 @@ def pubsub(*, topic, min_instances=None):
       'eventFilters': [
         {
           'attribute': 'resource',
-          'value': f'projects/{os.environ['GCLOUD_PROJECT']}/topics/{topic}',
+          'value': f'projects/{project}/topics/{topic}',
         },
       ]
     },
