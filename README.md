@@ -78,7 +78,7 @@
 Python supports higher-order functions. That is functions can accept and return other functions.
 In the following example, `say_hello()` accepts another function
 
-```
+```py
 def say_hello(func):
   print(f"Hello, {func()}")
 
@@ -91,7 +91,7 @@ say_hello(alice) # Prints "Hello, Alice"
 Decorators provide syntactic sugar around this type of higher-order function manipulation.
 Here's the same example implemented as a decorator.
 
-```
+```py
 def say_hello(func):
   def wrapper():
     print(f"Hello, {func()}")
@@ -114,7 +114,7 @@ the replaced function with `print(alice)` yields the output
 decorator. A more idiomatic way to do this is to implement the decorator using the utils
 provided in the built-in `functools` API:
 
-```
+```py
 import functools
 
 def say_hello(func):
@@ -140,7 +140,7 @@ for deployment.
 
 Consider the following decorator.
 
-```
+```py
 def https(_func=None, *, min_instances=None, max_instances=None, memory_mb=None):
 ```
 
@@ -154,7 +154,7 @@ will pass the target decorated function as `_func`. But when applied with one or
 arguments `_func` actually gets set to `None`. Therefore the decorator implementation
 must explicitly handle both cases:
 
-```
+```py
 if _func is None:
   return https_with_options
 
@@ -163,7 +163,7 @@ return https_with_options(_func)
 
 Now consider the following decorator.
 
-```
+```py
 def pubsub(*, topic, min_instances=None):
 ```
 
@@ -172,6 +172,6 @@ defined without a default value making it a required argument. As a result, when
 target decorated function never gets passed into this decorator. So we essentially have only
 one case to handle:
 
-```
+```py
 return pubsub_with_topic
 ```
