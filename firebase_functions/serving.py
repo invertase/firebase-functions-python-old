@@ -38,12 +38,15 @@ def clean_nones(value):
 
 def wrap_backend_yaml(triggers):
   def wrapper():
-    trigger_data = [ trig.firebase_metadata for trig in triggers.values() ]
+    trigger_data = [ add_entrypoint(trig.firebase_metadata, name) for name, trig in triggers.items() ]
     result = {'cloudFunctions': trigger_data}
     response = yaml.dump(clean_nones(result))
     return Response(response, mimetype='text/yaml')
   return wrapper
 
+def add_entrypoint(yaml, name):
+    yaml['entryPoint'] = name
+    return yaml
 
 def is_http_trigger(metadata):
   trigger = metadata['trigger']
@@ -52,7 +55,7 @@ def is_http_trigger(metadata):
 
 def is_pubsub_trigger(metadata):
   trigger = metadata['trigger']
-  return trigger.get('eventType') == 'google.cloud.pubsub.topic.v1.messagePublished'
+  return trigger.get('eventType') == 'google.pubsub.topic.publish'
 
 
 def serve_triggers(triggers):
@@ -72,7 +75,7 @@ def serve_triggers(triggers):
   return app
 
 
-def serve_backend_yaml(triggers):
+def serve_admin(triggers):
   app = Flask(__name__)
   app.add_url_rule('/backend.yaml', endpoint='backend.yaml', view_func=wrap_backend_yaml(triggers))
   return app
