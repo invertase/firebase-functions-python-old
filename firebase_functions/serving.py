@@ -77,5 +77,5 @@ def serve_triggers(triggers):
 
 def serve_admin(triggers):
   app = Flask(__name__)
-  app.add_url_rule('/backend.yaml', endpoint='backend.yaml', view_func=wrap_backend_yaml(triggers))
+  app.add_url_rule('/__/functions.yaml', endpoint='functions.yaml', view_func=wrap_backend_yaml(triggers))
   return app
