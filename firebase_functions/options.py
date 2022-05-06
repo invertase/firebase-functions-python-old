@@ -70,13 +70,13 @@ class Options:
       service_account: The service account a function should run as. Defaults to
           the default compute service account.
   """
-  region: Optional[str] = None,
-  memory: Union[None, int, Sentinel] = None,
-  timeout_sec: Union[None, int, Sentinel] = None,
-  min_instances: Union[None, int, Sentinel] = None,
-  max_instances: Union[None, int, Sentinel] = None,
+  region: Optional[str] = "us-central1",
+  memory: Union[None, int, Sentinel] = Memory.MB_256,
+  timeout_sec: Union[None, int, Sentinel] = 60,
+  min_instances: Union[None, int, Sentinel] = 0,
+  max_instances: Union[None, int, Sentinel] = 1000,
   vpc: Union[None, VpcOptions, Sentinel] = None,
-  ingress: Union[None, IngressSettings, Sentinel] = None,
+  ingress: Union[None, IngressSettings, Sentinel] = IngressSettings.ALLOW_ALL,
   service_account: Union[None, str, Sentinel] = None
 
   def metadata(self):
