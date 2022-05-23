@@ -2,7 +2,7 @@ from setuptools import setup
 
 install_requires = [
     'pyyaml<6',
-    'Flask<2',
+    'flask<2',
     'gunicorn<21',
     'functions-framework>=3.0.0',
 ]
@@ -15,7 +15,7 @@ setup(
     packages=["firebase_functions"],
     python_requires='>=3.7',
     classifiers=[
-        'Development Status :: 5 - Production/Stable',
+        'Development Status :: 1 - Planning',
         'Intended Audience :: Developers',
         'Topic :: Software Development :: Build Tools',
         'Programming Language :: Python :: 3',
