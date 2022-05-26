@@ -2,6 +2,8 @@ from enum import Enum
 from dataclasses import dataclass
 from typing import Optional, Union
 
+from firebase_functions import params
+
 
 class Sentinel:
   """ Class for USE_DEFAULT. """
@@ -25,10 +27,10 @@ class VpcOptions:
   """Configuration for a virtual private cloud (VPC).
 
   Attributes:
-      connector: The ID of the connector to use. For maximal portability,
-          prefer just an <id> instead of
-          "projects/<project>/locations/<region>/connectors/<id>".
-      egress_setting: What kinds of outgoing connections can be established.
+    connector: The ID of the connector to use. For maximal portability,
+        prefer just an <id> instead of
+        "projects/<project>/locations/<region>/connectors/<id>".
+    egress_setting: What kinds of outgoing connections can be established.
   """
   connector: str
   egress_settings: VpcEgressSettings
@@ -38,7 +40,7 @@ class IngressSettings(Enum):
   """What kind of traffic can access this Cloud Function."""
   ALLOW_ALL = "ALLOW_ALL"
   ALLOW_INTERNAL_ONLY = "ALLOW_INTERNAL_ONLY"
-  ALLOW_INTERAL_AND_GCLB = "ALLOW_INTERNAL_AND_GCLB"
+  ALLOW_INTERNAL_AND_GCLB = "ALLOW_INTERNAL_AND_GCLB"
 
 
 class Memory(Enum):
@@ -56,7 +58,7 @@ class Options:
   """Options available for all function types in a codebase.
 
   Attributes:
-      region: Region to deploy functions. Defaults to us-central1.
+      region: (str) Region to deploy functions. Defaults to us-central1.
       memory: MB to allocate to function. Defaults to Memory.MB_256
       timeout_sec: Seconds before a function fails with a timeout error.
           Defaults to 60s.
@@ -70,17 +72,22 @@ class Options:
       service_account: The service account a function should run as. Defaults to
           the default compute service account.
   """
-  region: Optional[str] = None,
-  memory: Union[None, int, Sentinel] = None,
-  timeout_sec: Union[None, int, Sentinel] = None,
-  min_instances: Union[None, int, Sentinel] = None,
-  max_instances: Union[None, int, Sentinel] = None,
-  vpc: Union[None, VpcOptions, Sentinel] = None,
-  ingress: Union[None, IngressSettings, Sentinel] = None,
+  allowed_origins: str = None
+  allowed_methods: str = None
+  region: Optional[str] = None
+  memory: Union[None, int, Sentinel] = None
+  timeout_sec: Union[None, int, Sentinel] = None
+  min_instances: Union[None, int, Sentinel] = None
+  max_instances: Union[None, int, Sentinel] = None
+  vpc: Union[None, VpcOptions, Sentinel] = None
+  ingress: Union[None, IngressSettings, Sentinel] = None
   service_account: Union[None, str, Sentinel] = None
+  secrets: Union[None, list[str], params.ListExpression, Sentinel] = None
 
   def metadata(self):
     return {
+        "allowed_origins": self.allowed_methods,
+        "allowed_methods": self.allowed_methods,
         "region": self.region,
         "memory": self.memory,
         "timeout_sec": self.timeout_sec,

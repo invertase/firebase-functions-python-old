@@ -2,9 +2,9 @@
 import functools
 from flask import Response as FlaskResponse, Request as FlaskRequest
 from dataclasses import dataclass
-from typing import TypeVar, Callable, Union, Generic, Tuple, Any, Optional
+from typing import  Callable, Union,  Tuple,  Optional
 from firebase_functions import options, params
-
+from firebase_functions.options import Options
 
 Request = FlaskRequest
 
@@ -39,13 +39,34 @@ class OnRequestOptions(options.Options):
 
 
 def on_request(
-    func: Callable[[Request], Response] = None,
-    opts: Optional[OnRequestOptions] = None
+        func: Callable[[Request], Response] = None,
+        *,
+        # TODO add all options inline, and use Options internally
+        allowed_origins: str = None,
+        allowed_methods: str = None,
+        region: Optional[str] = None,
+        memory: Union[None, int, params.IntExpression,
+                      options.Sentinel] = None,
+        timeout_sec: Union[None, int,
+                           params.IntExpression, options.Sentinel] = None,
+        min_instances: Union[None, int,
+                             params.IntExpression, options.Sentinel] = None,
+        max_instances: Union[None, int,
+                             params.IntExpression, options.Sentinel] = None,
+        vpc: Union[None, options.VpcOptions, options.Sentinel] = None,
+        ingress: Union[None, options.IngressSettings, options.Sentinel] = None,
+        service_account: Union[None, str,
+                               params.StringExpression, options.Sentinel] = None,
+        secrets: Union[None, list[str],
+                       params.ListExpression, options.Sentinel] = None,
 ) -> Callable[[Request], Response]:
   """Decorator for a function that handles raw HTTPS requests.
 
   Parameters:
-
+      allowed_origins: Origins allowed to invoke this function. Affects CORS
+        options.
+      allowed_methods: Methods allowed to invoke this function. Affects CORS
+        options.
       region: Region to deploy functions. Defaults to us-central1.
       memory: MB to allocate to function. Defaults to Memory.MB_256
       timeout_sec: Seconds before a function fails with a timeout error.
@@ -59,11 +80,16 @@ def on_request(
         Defaults to all traffic.
       service_account: The service account a function should run as. Defaults to
         the default compute service account.
+      secrets:
 
-  To reset an attribute to factory default, use options.USE_DEFAULT
+  To reset an attribute to factory default, use USE_DEFAULT
   """
 
-  metadata = {} if opts is None else opts.metadata()
+  # Construct an Options object out from the args passed by the user, if any.
+  _options = Options(region, memory, timeout_sec, min_instances,
+                     max_instances, vpc, ingress, service_account)
+
+  metadata = {} if _options is None else _options.metadata()
 
   def https_with_options(func):
     @functools.wraps(func)

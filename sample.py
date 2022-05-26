@@ -1,12 +1,12 @@
-from firebase_functions import pubsub
+from firebase_functions import https
+from firebase_functions.options import Memory
 
-@pubsub.https(memory_mb=256)
-def http_function(request):
+
+@https.on_request(memory=Memory.MB_256, region='us-central-1')
+def http_function():
   return 'Hello world'
 
-@pubsub.pubsub(
-  topic='news',
-  min_instances=1,
-)
-def pubsub_function(event, context):
-  print('pubsub:', event, context)
+
+# @pubsub.https()
+# def pubsub_function(event, context):
+#   print('pubsub:', event, context)

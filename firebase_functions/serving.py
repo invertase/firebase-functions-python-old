@@ -5,48 +5,56 @@ from flask import jsonify
 from flask import request
 from flask import Response
 
-
-_ALLOWED_METHODS = ["GET", "POST", "PUT", "DELETE"]
+allowed_methods = ['GET', 'POST', 'PUT', 'DELETE']
 
 
 def wrap_http_trigger(trig):
+
   def wrapper():
     return trig(request)
+
   return wrapper
 
 
 def wrap_pubsub_trigger(trig):
+
   def wrapper():
     data = request.get_json(force=True)
     trig(data, {})
-    return jsonify(dict())
+    return jsonify({})
+
   return wrapper
 
 
 def clean_nones(value):
-    if isinstance(value, list):
-      return [clean_nones(x) for x in value if x is not None]
-    elif isinstance(value, dict):
-      return {
-        key: clean_nones(val)
-        for key, val in value.items()
-        if val is not None
-      }
-    else:
-      return value
+  if isinstance(value, list):
+    return [clean_nones(x) for x in value if x is not None]
+  elif isinstance(value, dict):
+    return {
+        key: clean_nones(val) for key, val in value.items() if val is not None
+    }
+  else:
+    return value
 
 
 def wrap_backend_yaml(triggers):
+
   def wrapper():
-    trigger_data = [ add_entrypoint(trig.firebase_metadata, name) for name, trig in triggers.items() ]
+    trigger_data = [
+        add_entrypoint(trig.firebase_metadata, name)
+        for name, trig in triggers.items()
+    ]
     result = {'cloudFunctions': trigger_data}
     response = yaml.dump(clean_nones(result))
     return Response(response, mimetype='text/yaml')
+
   return wrapper
 
+
 def add_entrypoint(yaml, name):
-    yaml['entryPoint'] = name
-    return yaml
+  yaml['entryPoint'] = name
+  return yaml
+
 
 def is_http_trigger(metadata):
   trigger = metadata['trigger']
@@ -64,11 +72,15 @@ def serve_triggers(triggers):
   for name, trig in triggers.items():
     metadata = trig.firebase_metadata
     if is_http_trigger(metadata):
-      app.add_url_rule(
-        f'/{name}', endpoint=name, view_func=wrap_http_trigger(trig), methods=_ALLOWED_METHODS)
+      app.add_url_rule(f'/{name}',
+                       endpoint=name,
+                       view_func=wrap_http_trigger(trig),
+                       methods=allowed_methods)
     elif is_pubsub_trigger(metadata):
-      app.add_url_rule(
-        f'/{name}', endpoint=name, view_func=wrap_pubsub_trigger(trig), methods=['POST'])
+      app.add_url_rule(f'/{name}',
+                       endpoint=name,
+                       view_func=wrap_pubsub_trigger(trig),
+                       methods=['POST'])
     else:
       raise ValueError('Unknown trigger type')
 
@@ -77,5 +89,7 @@ def serve_triggers(triggers):
 
 def serve_admin(triggers):
   app = Flask(__name__)
-  app.add_url_rule('/__/functions.yaml', endpoint='functions.yaml', view_func=wrap_backend_yaml(triggers))
+  app.add_url_rule('/__/functions.yaml',
+                   endpoint='functions.yaml',
+                   view_func=wrap_backend_yaml(triggers))
   return app

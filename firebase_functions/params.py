@@ -278,8 +278,8 @@ class SecretParam:
     return str(os.environ.get(self.name) or self.default or "")
 
 
-PROJECT_ID = StringParam(
-    "GCLOUD_PROJECT", description="The active Firebase project")
+PROJECT_ID = StringParam("GCLOUD_PROJECT",
+                         description="The active Firebase project")
 
 STORAGE_BUCKET = StringParam(
     "STORAGE_BUCKET",
@@ -297,6 +297,6 @@ EXTENSION_ID = StringParam(
     "EXT_INSTANCE_ID",
     label="Extension instance ID",
     description="When a function is running as part of an extension, "
-                "this is the unique identifier for the installed extension "
-                "instance",
+    "this is the unique identifier for the installed extension "
+    "instance",
     default="")

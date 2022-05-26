@@ -1,4 +1,3 @@
-
 # def pubsub(*, topic, min_instances=None):
 #   project = os.environ.get('GCLOUD_PROJECT')
 #   metadata = {

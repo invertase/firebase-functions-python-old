@@ -1,3 +1,7 @@
+"""
+Code generator.
+"""
+
 import importlib
 import importlib.util
 import inspect
@@ -5,12 +9,13 @@ import os
 import sys
 
 
-def get_module_nanme(file_path):
+def get_module_name(file_path: str):
   basename = os.path.basename(file_path)
   return os.path.splitext(basename)[0]
 
-def get_exports(file_path):
-  modname = get_module_nanme(file_path)
+
+def get_exports(file_path: str):
+  modname = get_module_name(file_path)
   spec = importlib.util.spec_from_file_location(modname, file_path)
   module = importlib.util.module_from_spec(spec)
   spec.loader.exec_module(module)
@@ -24,7 +29,7 @@ def get_exports(file_path):
   return exports
 
 
-def generate_http_server(module_name, exports):
+def generate_http_server(module_name, exports: dict):
   print('from firebase_functions import serving')
   print()
   print(f'import {module_name} as _alias')
@@ -45,11 +50,11 @@ if __name__ == '__main__':
     print('Usage: python codegen.py <PathToModule>')
     sys.exit(1)
 
-  file_path = args[0]
-  exports = get_exports(file_path)
-  if not exports:
+  _file_path = args[0]
+  _exports = get_exports(_file_path)
+  if not _exports:
     print('No exports in module')
     sys.exit(1)
 
-  mod_name = get_module_nanme(file_path)
-  generate_http_server(mod_name, exports)
+  mod_name = get_module_name(_file_path)
+  generate_http_server(mod_name, _exports)
