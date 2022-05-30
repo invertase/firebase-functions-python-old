@@ -1,10 +1,14 @@
-"""HTTPS """
 import functools
+
 from flask import Response as FlaskResponse, Request as FlaskRequest
 from dataclasses import dataclass
-from typing import  Callable, Union,  Tuple,  Optional
-from firebase_functions import options, params
-from firebase_functions.options import Options
+
+from typing import Callable, List, Union, Tuple, Optional
+
+from firebase_functions import params
+from firebase_functions import options
+
+from firebase_functions.params import IntParam, StringParam, ListParam
 
 Request = FlaskRequest
 
@@ -23,10 +27,9 @@ class OnRequestOptions(options.Options):
 
   To reset an attribute to factory default, use options.USE_DEFAULT
   """
-  allowed_origins: str = None,
-  allowed_methods: str = None,
-  secrets: Union[None, Tuple[str],
-                 params._ListExpression, options.Sentinel] = None
+  allowed_origins: str = None
+  allowed_methods: str = None
+  secrets: Union[None, Tuple[str], params.ListParam, options.Sentinel] = None
 
   # override metadata and merge with our own options
   def metadata(self):
@@ -39,26 +42,19 @@ class OnRequestOptions(options.Options):
 
 
 def on_request(
-        func: Callable[[Request], Response] = None,
-        *,
-        # TODO add all options inline, and use Options internally
-        allowed_origins: str = None,
-        allowed_methods: str = None,
-        region: Optional[str] = None,
-        memory: Union[None, int, params.IntExpression,
-                      options.Sentinel] = None,
-        timeout_sec: Union[None, int,
-                           params.IntExpression, options.Sentinel] = None,
-        min_instances: Union[None, int,
-                             params.IntExpression, options.Sentinel] = None,
-        max_instances: Union[None, int,
-                             params.IntExpression, options.Sentinel] = None,
-        vpc: Union[None, options.VpcOptions, options.Sentinel] = None,
-        ingress: Union[None, options.IngressSettings, options.Sentinel] = None,
-        service_account: Union[None, str,
-                               params.StringExpression, options.Sentinel] = None,
-        secrets: Union[None, list[str],
-                       params.ListExpression, options.Sentinel] = None,
+    func: Callable[[Request], Response] = None,
+    *,
+    allowed_origins: str = None,
+    allowed_methods: str = None,
+    region: Optional[str] = None,
+    memory: Union[None, int, IntParam, options.Sentinel] = None,
+    timeout_sec: Optional[int] = None,
+    min_instances: Union[None, int, IntParam, options.Sentinel] = None,
+    max_instances: Union[None, int, IntParam, options.Sentinel] = None,
+    vpc: Union[None, options.VpcOptions, options.Sentinel] = None,
+    ingress: Union[None, options.IngressSettings, options.Sentinel] = None,
+    service_account: Union[None, str, StringParam, options.Sentinel] = None,
+    secrets: Union[None, List[str], ListParam, options.Sentinel] = None,
 ) -> Callable[[Request], Response]:
   """Decorator for a function that handles raw HTTPS requests.
 
@@ -86,12 +82,17 @@ def on_request(
   """
 
   # Construct an Options object out from the args passed by the user, if any.
-  _options = Options(region, memory, timeout_sec, min_instances,
-                     max_instances, vpc, ingress, service_account)
+  _options = options.Options(allowed_origins, allowed_methods, region, memory,
+                             timeout_sec, min_instances, max_instances, vpc,
+                             ingress, service_account, secrets)
 
   metadata = {} if _options is None else _options.metadata()
 
+  metadata['apiVersion'] = 1
+  metadata['trigger'] = {}
+
   def https_with_options(func):
+
     @functools.wraps(func)
     def wrapper_func(*args, **kwargs):
       return func(*args, **kwargs)

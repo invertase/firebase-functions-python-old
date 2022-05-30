@@ -5,7 +5,7 @@ from flask import jsonify
 from flask import request
 from flask import Response
 
-allowed_methods = ['GET', 'POST', 'PUT', 'DELETE']
+_ALLOWED_METHODS = ["GET", "POST", "PUT", "DELETE"]
 
 
 def wrap_http_trigger(trig):
@@ -21,7 +21,7 @@ def wrap_pubsub_trigger(trig):
   def wrapper():
     data = request.get_json(force=True)
     trig(data, {})
-    return jsonify({})
+    return jsonify(dict())
 
   return wrapper
 
@@ -75,7 +75,7 @@ def serve_triggers(triggers):
       app.add_url_rule(f'/{name}',
                        endpoint=name,
                        view_func=wrap_http_trigger(trig),
-                       methods=allowed_methods)
+                       methods=_ALLOWED_METHODS)
     elif is_pubsub_trigger(metadata):
       app.add_url_rule(f'/{name}',
                        endpoint=name,
@@ -89,7 +89,7 @@ def serve_triggers(triggers):
 
 def serve_admin(triggers):
   app = Flask(__name__)
-  app.add_url_rule('/__/functions.yaml',
-                   endpoint='functions.yaml',
+  app.add_url_rule('/backend.yaml',
+                   endpoint='backend.yaml',
                    view_func=wrap_backend_yaml(triggers))
   return app

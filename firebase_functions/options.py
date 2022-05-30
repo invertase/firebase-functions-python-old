@@ -1,6 +1,6 @@
 from enum import Enum
 from dataclasses import dataclass
-from typing import Optional, Union
+from typing import List, Optional, Union
 
 from firebase_functions import params
 
@@ -82,7 +82,7 @@ class Options:
   vpc: Union[None, VpcOptions, Sentinel] = None
   ingress: Union[None, IngressSettings, Sentinel] = None
   service_account: Union[None, str, Sentinel] = None
-  secrets: Union[None, list[str], params.ListExpression, Sentinel] = None
+  secrets: Union[None, List[str], params.ListParam, Sentinel] = None
 
   def metadata(self):
     return {

@@ -12,7 +12,7 @@ setup(
     version='0.0.1',
     description='Firebase Functions Python SDK',
     install_requires=install_requires,
-    packages=["firebase_functions"],
+    packages=['firebase_functions'],
     python_requires='>=3.7',
     classifiers=[
         'Development Status :: 1 - Planning',

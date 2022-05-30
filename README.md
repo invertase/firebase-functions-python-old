@@ -1,36 +1,42 @@
-# Requirements
+# Firebase Functions Python SDK
 
-* Python 3.6 or higher
-* Pip (usually installed alongside Python)
+## Requirements
 
-# Setup
+* Python 3.7 or higher.
+* Pip (usually installed alongside Python).
 
-* Install `virtualenv` if you already haven't. Makes it a lot easier to keep
-  Python dependencies and modules isolated from the rest of your environment.
+## Usage
+Install virtual environment `virtualenv` if you already haven't by going through this guide. 
+Its makes it a lot easier to keep Python dependencies and modules isolated from the rest 
+of your environment.
+```
+pip install --user virtualenv
 
-  ```
-  pip install --user virtualenv
+# After this you might have to add the virtualenv binary
+# to your $PATH.
+```
+1. Start by creating a virtual environment in your project directory.
+    ```
+    python -m venv .env
+    ```
+2. Activate the virtual environment you just created.
+    ```
+    source .env/bin/activate
+    ```
+3. Install the library.
+    ```
+    pip install firebase_functions
+    ```
+## Development setup
+Clone this repo and install the requirements
 
-  # After this you might have to add the virtualenv binary
-  # to your $PATH.
-  ```
-
-* Create and activate a new virtual environment.
-
- ```
- virtualenv -p python3 py3
- source py3/bin/activate
- ```
-
-* Install dependencies.
-
- ```
- pip install -r requirements.txt
- ```
-
-# Running the example
+## Running the example
 
 * `firebase_functions` contains the experimental Functions SDK for Python.
+
+  ```
+  python3 firebase_functions/setup.py install
+  ```
 
 * `sample.py` contains some sample user code written using the Functions SDK.
 
@@ -44,13 +50,13 @@
  * Start the Flask server to serve the generated entrypoint.
 
   ```
-  gunicorn -b :8080 app:app
+  gunicorn -b localhost:8080 app:app
   ```
 
 * Start a separate server to serve the `backend.yaml`.
 
   ```
-  gunicorn -b :8081 app:backend_yaml
+  gunicorn -b localhost:8081 app:admin
   ```
 
 * To trigger the HTTP function:
@@ -71,9 +77,9 @@
  curl localhost:8081/backend.yaml
  ```
 
-# Implementation notes
+## Implementation notes
 
-## Decorators
+### Decorators
 
 Python supports higher-order functions. That is functions can accept and return other functions.
 In the following example, `say_hello()` accepts another function
@@ -136,7 +142,7 @@ Specifically, each decorator adds a new `firebase_metadata` property to develope
 Later, our codegen tool will extract this metadata to generate the necessary manifest files
 for deployment.
 
-## Decorators with arguments
+### Decorators with arguments
 
 Consider the following decorator.
 

@@ -1,12 +1,31 @@
-from firebase_functions import https
+"""SAMPLE APP"""
+
+from firebase_functions.log import debug
+from firebase_functions.request import Response, on_request
+from firebase_functions.call import on_call
 from firebase_functions.options import Memory
+from firebase_functions.call import CallableRequest
 
 
-@https.on_request(memory=Memory.MB_256, region='us-central-1')
-def http_function():
-  return 'Hello world'
+# Sample of a HTTPS request CF.
+@on_request(memory=Memory.MB_256, region='us-central-1')
+def http_request_function(req):
+
+  debug('Debugging on_request')
+  debug('Data: ' + str(req.data))
+
+  res: Response = Response()
+
+  res.data = 'Hello World'
+
+  return res
 
 
-# @pubsub.https()
-# def pubsub_function(event, context):
-#   print('pubsub:', event, context)
+# Sample of a HTTPS callable CF.
+@on_call(memory=Memory.MB_256, region='us-central-1')
+def http_callable_function(req: CallableRequest):
+
+  debug('Debugging on_call')
+  debug('Data: ' + str(req.data))
+
+  return 'Hello World'

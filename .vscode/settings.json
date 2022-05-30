@@ -3,11 +3,6 @@
   "python.linting.pylintEnabled": true,
   "python.formatting.provider": "yapf",
   "python.formatting.yapfArgs": ["--style", "{based_on_style: google, indent_width: 2}"],
-  "[python]": {
-    "editor.tabSize": 2,
-    "editor.insertSpaces": true,
-    "editor.detectIndentation": false,
-    "editor.defaultFormatter": "ms-python.python",
-    "editor.formatOnSave": true
-  }
+  "python.linting.pylintPath": "pylint",
+  "editor.formatOnSave": true
 }

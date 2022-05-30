@@ -29,7 +29,11 @@ def get_exports(file_path: str):
   return exports
 
 
-def generate_http_server(module_name, exports: dict):
+def generate_http_server(module_name: str, exports: dict):
+  print('"""APP SERVER"""')
+  print()
+  print('# This is a generated file, do not edit.')
+  print()
   print('from firebase_functions import serving')
   print()
   print(f'import {module_name} as _alias')
