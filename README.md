@@ -59,10 +59,18 @@ Clone this repo and install the requirements
   gunicorn -b localhost:8081 app:admin
   ```
 
-* To trigger the HTTP function:
+* To trigger the HTTP REQUEST function:
 
  ```
- curl localhost:8080/http_function
+ curl localhost:8080/http_request_function
+ ```
+
+* To trigger the HTTP CALL function:
+
+ ```
+  curl -X POST \
+  -d '{"username":"xyz","password":"xyz"}' \
+  localhost:8080/http_callable_function
  ```
 
 * To trigger the PubSub function:
@@ -71,11 +79,14 @@ Clone this repo and install the requirements
  curl -X POST -d '{"uid": "alice"}' localhost:8080/pubsub_function
  ```
 
+
 * To get the discovery yaml (currently served on the same port):
 
  ```
  curl localhost:8081/backend.yaml
  ```
+
+
 
 ## Implementation notes
 
