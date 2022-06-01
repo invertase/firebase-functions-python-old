@@ -1,7 +1,6 @@
 """Module for a logger that formats output correctly for Cloud Logging."""
 
 import logging
-import string
 import sys
 
 logging.basicConfig(level=logging.INFO)
@@ -21,14 +20,17 @@ class SingleLevelFilter(logging.Filter):
       return record.levelno == self.passlevel
 
 
-def debug(message: string, sep=''):
+# class JSONFormatter(logging.Formatter):
+
+
+def debug(*args, sep=''):
   debug_log = logging.StreamHandler(sys.stdout)
   debug_filter = SingleLevelFilter(logging.INFO, False)
   debug_log.addFilter(debug_filter)
   root_logger = logging.getLogger()
   root_logger.addHandler(debug_log)
   logger.setLevel(logging.DEBUG)
-  logger.debug(message)
+  logger.debug(args)
 
 
 def info(*args, sep=''):

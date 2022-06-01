@@ -3,6 +3,7 @@ import functools
 from typing import Callable, List, Union, Optional, Any, TypeVar, Generic
 
 from firebase_functions import options, params
+from firebase_functions.request import Request
 
 T = TypeVar('T')
 
@@ -101,9 +102,15 @@ class CallableRequest(Generic[T]):
   instance_id_token: str
   '''An unverified token for a Firebase Instance ID.'''
 
+  raw_request: Request
+  '''The raw request handled by the callable.'''
+
+
+CalableFunction = Callable[[CallableRequest[T]], Any]
+
 
 def on_call(
-    func: Callable[[CallableRequest[T]], Any] = None,
+    func: CalableFunction = None,
     *,
     allowed_origins: Optional[str] = None,
     region: Optional[str] = None,
@@ -116,7 +123,7 @@ def on_call(
     service_account: Union[None, str, params.StringParam,
                            options.Sentinel] = None,
     secrets: Union[None, List[str], params.ListParam, options.Sentinel] = None,
-) -> Callable[[CallableRequest], Any]:
+) -> CalableFunction:
   '''Decorator for a function that can be called like an RPC service.
 
   Parameters:
@@ -141,11 +148,11 @@ def on_call(
   '''
 
   # Construct an Options object out from the args passed by the user, if any.
-  _options = options.Options(allowed_origins, region, memory, timeout_sec,
-                             min_instances, max_instances, vpc, ingress,
-                             service_account, secrets)
+  callable_options = options.Options(allowed_origins, region, memory,
+                                     timeout_sec, min_instances, max_instances,
+                                     vpc, ingress, service_account, secrets)
 
-  metadata = {} if _options is None else _options.metadata()
+  metadata = {} if callable_options is None else callable_options.metadata()
 
   metadata['apiVersion'] = 1
   metadata['trigger'] = {}

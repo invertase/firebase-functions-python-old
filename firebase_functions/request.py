@@ -1,9 +1,14 @@
+"""HTTPS request modeul"""
+
 import functools
+from urllib import response
 
 from flask import Response as FlaskResponse, Request as FlaskRequest
 from dataclasses import dataclass
 
-from typing import Callable, List, Union, Tuple, Optional
+from typing import Any, Callable, List, Union, Tuple, Optional
+
+from requests import request
 
 from firebase_functions import params
 from firebase_functions import options
@@ -11,8 +16,27 @@ from firebase_functions import options
 from firebase_functions.params import IntParam, StringParam, ListParam
 
 Request = FlaskRequest
-
 Response = FlaskResponse
+
+# HttpsFunction = Callable[[Request], Response]
+
+
+class HttpsFunction(Callable):
+  '''Function type for https decorators.'''
+
+  def __init__(self, req: Request, res: Response):
+    self.request = req
+    self.response = res
+    self.__trigger__ = [None, Any]
+    self.__endpoint__ = None
+
+  @property
+  def __trigger__(self):
+    return self.__trigger__
+
+  @property
+  def __endpoint__(self):
+    return self.__endpoint__
 
 
 @dataclass(frozen=True)
@@ -42,8 +66,6 @@ class OnRequestOptions(options.Options):
 
 
 def on_request(
-    func: Callable[[Request], Response] = None,
-    *,
     allowed_origins: str = None,
     allowed_methods: str = None,
     region: Optional[str] = None,
@@ -55,7 +77,7 @@ def on_request(
     ingress: Union[None, options.IngressSettings, options.Sentinel] = None,
     service_account: Union[None, str, StringParam, options.Sentinel] = None,
     secrets: Union[None, List[str], ListParam, options.Sentinel] = None,
-) -> Callable[[Request], Response]:
+):
   """Decorator for a function that handles raw HTTPS requests.
 
   Parameters:
@@ -82,16 +104,17 @@ def on_request(
   """
 
   # Construct an Options object out from the args passed by the user, if any.
-  _options = options.Options(allowed_origins, allowed_methods, region, memory,
-                             timeout_sec, min_instances, max_instances, vpc,
-                             ingress, service_account, secrets)
+  request_options = options.Options(allowed_origins, allowed_methods, region,
+                                    memory, timeout_sec, min_instances,
+                                    max_instances, vpc, ingress,
+                                    service_account, secrets)
 
-  metadata = {} if _options is None else _options.metadata()
+  metadata = {} if request_options is None else request_options.metadata()
 
   metadata['apiVersion'] = 1
   metadata['trigger'] = {}
 
-  def https_with_options(func):
+  def https_with_options(func: HttpsFunction):
 
     @functools.wraps(func)
     def wrapper_func(*args, **kwargs):
@@ -101,7 +124,4 @@ def on_request(
     wrapper_func.firebase_metadata = metadata
     return wrapper_func
 
-  if func is None:
-    return https_with_options
-
-  return https_with_options(func)
+  return https_with_options
