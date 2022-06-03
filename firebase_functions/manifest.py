@@ -1,12 +1,14 @@
 """Specs for the served functions.yaml of the user's functions"""
 
+# pylint: disable=invalid-name
+
 from dataclasses import dataclass
 from typing import TypedDict, Optional, Union
 
 
 class Vpc(TypedDict):
   connector: str
-  egress_settings: str
+  egressSettings: str
 
 
 class Secret(TypedDict):
@@ -19,31 +21,31 @@ class HttpsTrigger(TypedDict):
 
 
 class EventTrigger(TypedDict):
-  event_filters: dict
-  event_filter_path_patterns: dict
+  eventFilters: dict
+  eventFilter_path_patterns: dict
   channel: str
-  event_type: str
+  eventType: str
   retry: bool
   region: str
-  service_account_email: str
+  serviceAccountEmail: str
 
 
 class RetryConfig(TypedDict):
-  retry_count: int
-  max_retry_duration: str
-  min_backoff_duration: str
-  max_backoff_duration: str
-  max_doublings: int
+  retryCount: int
+  maxRetryDuration: str
+  minBackoffDuration: str
+  maxBackoffDuration: str
+  maxDoublings: int
 
 
 class ScheduleTrigger(TypedDict):
   schedule: dict
   timezone: str
-  retry_config: RetryConfig
+  retryConfig: RetryConfig
 
 
 class BlockingTrigger(TypedDict):
-  event_type: str
+  eventType: str
   options: dict
 
 
@@ -51,26 +53,26 @@ class BlockingTrigger(TypedDict):
 class ManifestEndpoint():
   """An definition of a function as appears in the Manifest."""
 
-  entry_point: str
+  entryPoint: str
   region: list[str]
-  platform: str
-  available_memory_mb: int
-  max_instances: int
-  min_instances: int
-  concurrency: int
-  service_account_email: str
-  timeout_seconds: int
-  vpc: Vpc
-  labels: dict[str, str]
-  ingress_settings: str
-  environment_variables: dict
-  secret_environment_variables: list[Secret]
-  https_trigger: HttpsTrigger
-  callable_trigger: dict
-  event_trigger: EventTrigger
-  schedule_trigger: ScheduleTrigger
-  blocking_trigger: BlockingTrigger
+  platform: str = None
+  availableMemoryMb: int = None
+  maxInstances: int = None
+  minInstances: int = None
+  concurrency: int = None
+  serviceAccountEmail: str = None
+  timeoutSeconds: int = None
   cpu: Union[int, str] = 'gcf_gen1'
+  vpc: Vpc = None
+  labels: dict[str, str] = None
+  ingressSettings: str = None
+  environmentVariables: dict = None
+  secretEnvironmentVariables: list[Secret] = None
+  httpsTrigger: HttpsTrigger = None
+  callableTrigger: dict = None
+  eventTrigger: EventTrigger = None
+  scheduleTrigger: ScheduleTrigger = None
+  blockingTrigger: BlockingTrigger = None
 
 
 @dataclass(frozen=True)
@@ -79,13 +81,8 @@ class ManifestRequiredAPI():
   reason: str
 
 
-class Endpoint(TypedDict):
-  key: str
-  endpoint: ManifestEndpoint
-
-
 @dataclass(frozen=True)
 class ManifestStack():
-  endpoints: dict[str, ManifestEndpoint]
-  required_apis: Union[Optional[list[ManifestRequiredAPI]], None] = None
-  spec_version: str = 'v1alpha1'
+  specVersion: str = 'v1alpha1'
+  endpoints: dict[str, ManifestEndpoint] = None
+  requiredAPIs: Union[Optional[list[ManifestRequiredAPI]], None] = None

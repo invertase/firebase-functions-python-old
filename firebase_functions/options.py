@@ -1,6 +1,6 @@
 from enum import Enum
 from dataclasses import dataclass
-from typing import List, Optional, Union
+from typing import List, Optional, Union, overload
 
 from firebase_functions import params
 
@@ -34,6 +34,12 @@ class VpcOptions:
   """
   connector: str
   egress_settings: VpcEgressSettings
+
+  def __dict__(self):
+    return {
+        "connector": self.connector,
+        "egressSettings": self.egress_settings.value,
+    }
 
 
 class IngressSettings(Enum):

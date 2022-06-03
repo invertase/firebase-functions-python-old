@@ -1,3 +1,5 @@
+import json
+from typing import Callable
 import yaml
 
 from flask import Flask
@@ -5,13 +7,19 @@ from flask import jsonify
 from flask import request
 from flask import Response
 
+from firebase_functions.manifest import ManifestEndpoint, ManifestStack
+
 _ALLOWED_METHODS = ["GET", "POST", "PUT", "DELETE"]
 
 
-def wrap_http_trigger(trig):
+def wrap_http_trigger(trig: Callable):
 
   def wrapper():
-    return trig(request)
+
+    try:
+      return trig(request)
+    except TypeError:
+      return trig(request, Response())
 
   return wrapper
 
@@ -37,28 +45,39 @@ def clean_nones(value):
     return value
 
 
-def wrap_backend_yaml(triggers):
+def wrap_functions_yaml(triggers):
 
   def wrapper():
     trigger_data = [
-        add_entrypoint(trig.firebase_metadata, name)
-        for name, trig in triggers.items()
+        add_entrypoint(
+            name,
+            clean_nones(trig.__endpoint__.__dict__),
+        ) for name, trig in triggers.items()
     ]
-    result = {'cloudFunctions': trigger_data}
-    response = yaml.dump(clean_nones(result))
+    result = ManifestStack(endpoints=trigger_data)
+    response = yaml.dump(clean_nones(result.__dict__))
     return Response(response, mimetype='text/yaml')
 
   return wrapper
 
 
-def add_entrypoint(yaml, name):
-  yaml['entryPoint'] = name
-  return yaml
+def to_camel_case(snake_str):
+  components = snake_str.split('_')
+  # We capitalize the first letter of each component except the first one
+  # with the 'title' method and join them together.
+  return components[0] + ''.join(x.title() for x in components[1:])
 
 
-def is_http_trigger(metadata):
-  trigger = metadata['trigger']
-  return trigger.get('eventType') is None
+def add_entrypoint(name, trigger):
+  endpoint = {}
+  endpoint[name] = trigger
+  return endpoint
+
+
+def is_http_trigger(trigger):
+  # If the function's trigger contains `httpsTrigger` attribute,
+  # then it's a https function.
+  return trigger.get('httpsTrigger') is not None
 
 
 def is_pubsub_trigger(metadata):
@@ -66,30 +85,41 @@ def is_pubsub_trigger(metadata):
   return trigger.get('eventType') == 'google.pubsub.topic.publish'
 
 
-def serve_triggers(triggers):
+def serve_triggers(triggers: list[Callable]):
+  """Start serving all triggers provided by the user locally.
+  Used by the generated `app` file upon deployment."""
   app = Flask(__name__)
 
   for name, trig in triggers.items():
-    metadata = trig.firebase_metadata
-    if is_http_trigger(metadata):
-      app.add_url_rule(f'/{name}',
-                       endpoint=name,
-                       view_func=wrap_http_trigger(trig),
-                       methods=_ALLOWED_METHODS)
-    elif is_pubsub_trigger(metadata):
-      app.add_url_rule(f'/{name}',
-                       endpoint=name,
-                       view_func=wrap_pubsub_trigger(trig),
-                       methods=['POST'])
+
+    trigger = getattr(trig, 'trigger')
+
+    if is_http_trigger(trigger):
+      app.add_url_rule(
+          f'/{name}',
+          endpoint=name,
+          view_func=wrap_http_trigger(trig),
+          methods=_ALLOWED_METHODS,
+      )
+    # elif is_pubsub_trigger(metadata):
+    #   app.add_url_rule(f'/{name}',
+    #                    endpoint=name,
+    #                    view_func=wrap_pubsub_trigger(trig),
+    #                    methods=['POST'])
     else:
-      raise ValueError('Unknown trigger type')
+      raise ValueError('Unknown trigger type!')
 
   return app
 
 
 def serve_admin(triggers):
+  """Generate a specs `functions.yaml` file and serve it locally
+  on the path `<host>:<port>/__/functions.yaml`."""
+
   app = Flask(__name__)
-  app.add_url_rule('/backend.yaml',
-                   endpoint='backend.yaml',
-                   view_func=wrap_backend_yaml(triggers))
+  app.add_url_rule(
+      '/__/functions.yaml',
+      endpoint='functions.yaml',
+      view_func=wrap_functions_yaml(triggers),
+  )
   return app
