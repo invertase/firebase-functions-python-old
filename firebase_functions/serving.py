@@ -1,4 +1,5 @@
-import json
+import dataclasses
+from enum import Enum
 from typing import Callable
 import yaml
 
@@ -7,9 +8,19 @@ from flask import jsonify
 from flask import request
 from flask import Response
 
-from firebase_functions.manifest import ManifestEndpoint, ManifestStack
+from firebase_functions.manifest import ManifestStack
 
-_ALLOWED_METHODS = ["GET", "POST", "PUT", "DELETE"]
+__ALLOWED_METHODS = ['GET', 'POST', 'PUT', 'DELETE']
+
+
+def asdict_factory(data):
+
+  def convert_value(obj):
+    if isinstance(obj, Enum):
+      return obj.value
+    return obj
+
+  return dict((k, convert_value(v)) for k, v in data)
 
 
 def wrap_http_trigger(trig: Callable):
@@ -51,7 +62,9 @@ def wrap_functions_yaml(triggers):
     trigger_data = [
         add_entrypoint(
             name,
-            clean_nones(trig.__endpoint__.__dict__),
+            clean_nones(
+                dataclasses.asdict(trig.__endpoint__,
+                                   dict_factory=asdict_factory)),
         ) for name, trig in triggers.items()
     ]
     result = ManifestStack(endpoints=trigger_data)
@@ -59,13 +72,6 @@ def wrap_functions_yaml(triggers):
     return Response(response, mimetype='text/yaml')
 
   return wrapper
-
-
-def to_camel_case(snake_str):
-  components = snake_str.split('_')
-  # We capitalize the first letter of each component except the first one
-  # with the 'title' method and join them together.
-  return components[0] + ''.join(x.title() for x in components[1:])
 
 
 def add_entrypoint(name, trigger):
@@ -99,7 +105,7 @@ def serve_triggers(triggers: list[Callable]):
           f'/{name}',
           endpoint=name,
           view_func=wrap_http_trigger(trig),
-          methods=_ALLOWED_METHODS,
+          methods=__ALLOWED_METHODS,
       )
     # elif is_pubsub_trigger(metadata):
     #   app.add_url_rule(f'/{name}',
