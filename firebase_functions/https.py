@@ -1,5 +1,4 @@
 import functools
-from platform import platform
 
 from flask import Response as FlaskResponse, Request as FlaskRequest
 from typing import Any, Callable, Generic, List, TypeVar, Union, Tuple, Optional
@@ -7,7 +6,7 @@ from dataclasses import dataclass
 
 from firebase_functions import params
 from firebase_functions import options
-from firebase_functions.manifest import ManifestEndpoint, ManifestStack, Vpc
+from firebase_functions.manifest import ManifestEndpoint
 
 Request = FlaskRequest
 Response = FlaskResponse
@@ -240,10 +239,7 @@ def on_request(
         platform='gcfv2',
         labels={},
         httpsTrigger={},
-        vpc=Vpc(
-            connector=vpc.connector,
-            egressSettings=vpc.egress_settings.value,
-        ),
+        vpc=vpc,
         availableMemoryMb=memory.value,
         maxInstances=max_instances,
         minInstances=min_instances,
@@ -301,6 +297,16 @@ def on_call(
 
   metadata = {} if callable_options is None else callable_options.metadata()
 
+  trigger = {
+      'platform': 'gcfv2',
+      **metadata, 'labels': {
+          'deployment-callable': 'true',
+      },
+      'httpsTrigger': {
+          'allowInsecure': False
+      }
+  }
+
   metadata['apiVersion'] = 1
   metadata['trigger'] = {}
 
@@ -311,7 +317,23 @@ def on_call(
       return func(*args, **kwargs)
 
     metadata['id'] = func.__name__
+
+    manifest = ManifestEndpoint(
+        entryPoint=func.__name__,
+        region=region,
+        platform='gcfv2',
+        labels={},
+        httpsTrigger={},
+        vpc=vpc,
+        availableMemoryMb=memory.value,
+        maxInstances=max_instances,
+        minInstances=min_instances,
+    )
+
     wrapper_func.firebase_metadata = metadata
+    wrapper_func.trigger = trigger
+    wrapper_func.__endpoint__ = manifest
+
     return wrapper_func
 
   return https_with_options

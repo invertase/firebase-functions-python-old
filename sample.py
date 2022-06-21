@@ -27,11 +27,11 @@ def http_request_function(req: Request, res: Response):
   return res
 
 
-# # Sample of a HTTPS callable CF.
-# @on_call(memory=Memory.MB_256, region='us-central-1')
-# def http_callable_function(req: CallableRequest):
+# Sample of a HTTPS callable CF.
+@on_call(memory=Memory.MB_256, region='us-central-1')
+def http_callable_function(req: CallableRequest):
 
-#   debug('Debugging on_call')
-#   debug('Data: ' + str(req.data))
+  debug('Debugging on_call')
+  debug('Data: ' + str(req.data))
 
-#   return 'Hello World'
+  return 'Hello World'

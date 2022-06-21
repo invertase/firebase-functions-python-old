@@ -1,6 +1,6 @@
 from enum import Enum
 from dataclasses import dataclass
-from typing import List, Optional, Union, overload
+from typing import List, Optional, Union
 
 from firebase_functions import params
 
@@ -16,7 +16,7 @@ USE_DEFAULT = Sentinel("Value used to reset an option to factory defaults")
 """ Used to reset a function option to factory default. """
 
 
-class VpcEgressSettings(Enum):
+class VpcEgressSettings(str, Enum):
   """ Valid settings for VPC egress. """
   PRIVATE_RANGES_ONLY = "PRIVATE_RANGES_ONLY"
   ALL_TRAFFIC = "ALL_TRAFFIC"
@@ -35,14 +35,8 @@ class VpcOptions:
   connector: str
   egress_settings: VpcEgressSettings
 
-  def __dict__(self):
-    return {
-        "connector": self.connector,
-        "egressSettings": self.egress_settings.value,
-    }
 
-
-class IngressSettings(Enum):
+class IngressSettings(str, Enum):
   """What kind of traffic can access this Cloud Function."""
   ALLOW_ALL = "ALLOW_ALL"
   ALLOW_INTERNAL_ONLY = "ALLOW_INTERNAL_ONLY"

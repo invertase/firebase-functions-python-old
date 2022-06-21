@@ -5,10 +5,7 @@
 from dataclasses import dataclass
 from typing import TypedDict, Optional, Union
 
-
-class Vpc(TypedDict):
-  connector: str
-  egressSettings: str
+from firebase_functions.options import VpcOptions
 
 
 class Secret(TypedDict):
@@ -63,7 +60,7 @@ class ManifestEndpoint():
   serviceAccountEmail: str = None
   timeoutSeconds: int = None
   cpu: Union[int, str] = 'gcf_gen1'
-  vpc: Vpc = None
+  vpc: VpcOptions = None
   labels: dict[str, str] = None
   ingressSettings: str = None
   environmentVariables: dict = None
