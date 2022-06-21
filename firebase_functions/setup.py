@@ -1,11 +1,6 @@
 from setuptools import setup
 
-install_requires = [
-    'pyyaml<6',
-    'flask<2',
-    'gunicorn<21',
-    'functions-framework>=3.0.0',
-]
+install_requires = ['flask>=2.1.2', 'functions-framework>=3.0.0']
 
 setup(
     name='firebase_functions',
@@ -13,7 +8,7 @@ setup(
     description='Firebase Functions Python SDK',
     install_requires=install_requires,
     packages=['firebase_functions'],
-    python_requires='>=3.7',
+    python_requires='>=3.9',
     classifiers=[
         'Development Status :: 1 - Planning',
         'Intended Audience :: Developers',

@@ -32,6 +32,11 @@ Clone this repo and install the requirements
 
 ## Running the example
 
+The minumum supported Python version is **3.9**. To install python 3.9 regardless of the version on your system:
+```
+virtualenv .env --python=3.9
+```
+
 * `firebase_functions` contains the experimental Functions SDK for Python.
 
   ```
@@ -43,9 +48,9 @@ Clone this repo and install the requirements
 * Run the codegen tool to generate an entrypoint. Save the output to a new
   `app.py` file.
 
- ```
- python ./firebase_functions/codegen.py ./sample.py > app.py
- ```
+  ```
+  python ./firebase_functions/codegen.py ./sample.py > app.py
+  ```
 
  * Start the Flask server to serve the generated entrypoint.
 
