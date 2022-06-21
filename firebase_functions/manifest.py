@@ -22,7 +22,7 @@ class HttpsTrigger(TypedDict):
 
 class EventTrigger(TypedDict):
   eventFilters: dict
-  eventFilter_path_patterns: dict
+  eventFilterPathPatterns: dict
   channel: str
   eventType: str
   retry: bool
