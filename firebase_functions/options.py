@@ -54,7 +54,7 @@ class Memory(Enum):
 
 
 @dataclass(frozen=True)
-class Options:
+class HttpsOptions:
   """Options available for all function types in a codebase.
 
   Attributes:
@@ -100,10 +100,10 @@ class Options:
 
 
 # TODO move to private module and store state there
-_options = Options()
+_options = HttpsOptions()
 
 
-def set_global_options(options: Options) -> None:
+def set_global_options(options: HttpsOptions) -> None:
   """Set options for all functions in a codebase."""
   # TODO move to private module and store state there
   _options = options

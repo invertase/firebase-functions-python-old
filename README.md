@@ -2,15 +2,17 @@
 
 ## Requirements
 
-* Python 3.7 or higher.
+* Python 3.9 or higher.
 * Pip (usually installed alongside Python).
 
 ## Usage
 Install virtual environment `virtualenv` if you already haven't by going through this guide. 
-Its makes it a lot easier to keep Python dependencies and modules isolated from the rest 
+It makes it a lot easier to keep Python dependencies and modules isolated from the rest 
 of your environment.
+> **Note**
+> The minumum supported Python version is **3.9**.
 ```
-pip install --user virtualenv
+pip install --user virtualenv --python=3.9
 
 # After this you might have to add the virtualenv binary
 # to your $PATH.
@@ -28,17 +30,10 @@ pip install --user virtualenv
     pip install firebase_functions
     ```
 ## Development setup
-Clone this repo and install the requirements
-
+Clone this repo and install the requirements.
 ## Running the example
 
-The minumum supported Python version is **3.9**. To install python 3.9 regardless of the version on your system:
-```
-virtualenv .env --python=3.9
-```
-
 * `firebase_functions` contains the experimental Functions SDK for Python.
-
   ```
   python3 firebase_functions/setup.py install
   ```
@@ -47,51 +42,36 @@ virtualenv .env --python=3.9
 
 * Run the codegen tool to generate an entrypoint. Save the output to a new
   `app.py` file.
-
   ```
   python ./firebase_functions/codegen.py ./sample.py > app.py
   ```
-
- * Start the Flask server to serve the generated entrypoint.
-
+* Start the Flask server to serve the generated entrypoint.
   ```
   gunicorn -b localhost:8080 app:app
   ```
-
 * Start a separate server to serve the `backend.yaml`.
-
   ```
   gunicorn -b localhost:8081 app:admin
   ```
-
 * To trigger the HTTP REQUEST function:
-
- ```
- curl localhost:8080/http_request_function
- ```
-
+  ```
+  curl localhost:8080/http_request_function
+  ```
 * To trigger the HTTP CALL function:
-
- ```
-  curl -X POST \
-  -d '{"username":"xyz","password":"xyz"}' \
-  localhost:8080/http_callable_function
- ```
-
+  ```
+    curl -X POST \
+    -d '{"username":"xyz","password":"xyz"}' \
+    localhost:8080/http_callable_function
+  ```
 * To trigger the PubSub function:
-
- ```
- curl -X POST -d '{"uid": "alice"}' localhost:8080/pubsub_function
- ```
-
+  ```
+  curl -X POST -d '{"uid": "alice"}' localhost:8080/pubsub_function
+  ```
 
 * To get the discovery yaml (currently served on the same port):
-
- ```
- curl localhost:8081/backend.yaml
- ```
-
-
+  ```
+  curl localhost:8081/__/functions.yaml
+  ```
 
 ## Implementation notes
 

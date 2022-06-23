@@ -145,7 +145,7 @@ class CallableFunction(HttpsFunction):
 
 
 @dataclass(frozen=True)
-class OnRequestOptions(options.Options):
+class OnRequestOptions(options.HttpsOptions):
   """Options for https on_request functions.
 
   Attributes:
@@ -210,10 +210,10 @@ def on_request(
   """
 
   # Construct an Options object out from the args passed by the user, if any.
-  request_options = options.Options(allowed_origins, allowed_methods, region,
-                                    memory.value, timeout_sec, min_instances,
-                                    max_instances, vpc, ingress,
-                                    service_account, secrets)
+  request_options = options.HttpsOptions(allowed_origins, allowed_methods,
+                                         region, memory.value, timeout_sec,
+                                         min_instances, max_instances, vpc,
+                                         ingress, service_account, secrets)
 
   metadata = {} if request_options is None else request_options.metadata()
 
@@ -291,9 +291,10 @@ def on_call(
   '''
 
   # Construct an Options object out from the args passed by the user, if any.
-  callable_options = options.Options(allowed_origins, region, memory,
-                                     timeout_sec, min_instances, max_instances,
-                                     vpc, ingress, service_account, secrets)
+  callable_options = options.HttpsOptions(allowed_origins, region, memory,
+                                          timeout_sec, min_instances,
+                                          max_instances, vpc, ingress,
+                                          service_account, secrets)
 
   metadata = {} if callable_options is None else callable_options.metadata()
 

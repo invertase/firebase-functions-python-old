@@ -13,7 +13,7 @@ from firebase_functions.manifest import ManifestStack
 __ALLOWED_METHODS = ['GET', 'POST', 'PUT', 'DELETE']
 
 
-def asdict_factory(data):
+def asdict_factory(data) -> dict:
 
   def convert_value(obj):
     if isinstance(obj, Enum):
@@ -23,7 +23,7 @@ def asdict_factory(data):
   return dict((k, convert_value(v)) for k, v in data)
 
 
-def wrap_http_trigger(trig: Callable):
+def wrap_http_trigger(trig: Callable) -> Callable:
 
   def wrapper():
 
@@ -40,12 +40,12 @@ def wrap_pubsub_trigger(trig):
   def wrapper():
     data = request.get_json(force=True)
     trig(data, {})
-    return jsonify(dict())
+    return jsonify({})
 
   return wrapper
 
 
-def clean_nones(value):
+def clean_nones(value) -> any:
   if isinstance(value, list):
     return [clean_nones(x) for x in value if x is not None]
   elif isinstance(value, dict):
@@ -56,7 +56,8 @@ def clean_nones(value):
     return value
 
 
-def wrap_functions_yaml(triggers):
+def wrap_functions_yaml(triggers) -> any:
+  """Wrapper around each trigger in the user's codebase."""
 
   def wrapper():
     trigger_data = [
@@ -74,24 +75,25 @@ def wrap_functions_yaml(triggers):
   return wrapper
 
 
-def add_entrypoint(name, trigger):
+def add_entrypoint(name, trigger) -> dict:
+  """Add an entrypoint for a single function in the user's codebase."""
   endpoint = {}
   endpoint[name] = trigger
   return endpoint
 
 
-def is_http_trigger(trigger):
+def is_http_trigger(trigger) -> bool:
   # If the function's trigger contains `httpsTrigger` attribute,
   # then it's a https function.
   return trigger.get('httpsTrigger') is not None
 
 
-def is_pubsub_trigger(metadata):
+def is_pubsub_trigger(metadata) -> bool:
   trigger = metadata['trigger']
   return trigger.get('eventType') == 'google.pubsub.topic.publish'
 
 
-def serve_triggers(triggers: list[Callable]):
+def serve_triggers(triggers: list[Callable]) -> Flask:
   """Start serving all triggers provided by the user locally.
   Used by the generated `app` file upon deployment."""
   app = Flask(__name__)
@@ -118,7 +120,7 @@ def serve_triggers(triggers: list[Callable]):
   return app
 
 
-def serve_admin(triggers):
+def serve_admin(triggers) -> Flask:
   """Generate a specs `functions.yaml` file and serve it locally
   on the path `<host>:<port>/__/functions.yaml`."""
 
