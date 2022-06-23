@@ -1,5 +1,7 @@
-pylint == 2.3.1
-pyyaml<6
-flask<2
-gunicorn<21
+pylint>=2.13.9
+pyyaml>=5.1
+yapf>=0.32.0
+flask>=2.1.2
+gunicorn>=20.1.0
 functions-framework>=3.0.0
+setuptools>=62.6.0

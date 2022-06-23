@@ -1,6 +1,6 @@
 from enum import Enum
 from dataclasses import dataclass
-from typing import Optional, Union
+from typing import List, Optional, Union
 
 from firebase_functions import params
 
@@ -16,7 +16,7 @@ USE_DEFAULT = Sentinel("Value used to reset an option to factory defaults")
 """ Used to reset a function option to factory default. """
 
 
-class VpcEgressSettings(Enum):
+class VpcEgressSettings(str, Enum):
   """ Valid settings for VPC egress. """
   PRIVATE_RANGES_ONLY = "PRIVATE_RANGES_ONLY"
   ALL_TRAFFIC = "ALL_TRAFFIC"
@@ -36,7 +36,7 @@ class VpcOptions:
   egress_settings: VpcEgressSettings
 
 
-class IngressSettings(Enum):
+class IngressSettings(str, Enum):
   """What kind of traffic can access this Cloud Function."""
   ALLOW_ALL = "ALLOW_ALL"
   ALLOW_INTERNAL_ONLY = "ALLOW_INTERNAL_ONLY"
@@ -54,7 +54,7 @@ class Memory(Enum):
 
 
 @dataclass(frozen=True)
-class Options:
+class HttpsOptions:
   """Options available for all function types in a codebase.
 
   Attributes:
@@ -82,7 +82,7 @@ class Options:
   vpc: Union[None, VpcOptions, Sentinel] = None
   ingress: Union[None, IngressSettings, Sentinel] = None
   service_account: Union[None, str, Sentinel] = None
-  secrets: Union[None, list[str], params.ListExpression, Sentinel] = None
+  secrets: Union[None, List[str], params.ListParam, Sentinel] = None
 
   def metadata(self):
     return {
@@ -100,10 +100,10 @@ class Options:
 
 
 # TODO move to private module and store state there
-_options = Options()
+_options = HttpsOptions()
 
 
-def set_global_options(options: Options) -> None:
+def set_global_options(options: HttpsOptions) -> None:
   """Set options for all functions in a codebase."""
   # TODO move to private module and store state there
   _options = options

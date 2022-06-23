@@ -1,3 +1,6 @@
+import dataclasses
+from enum import Enum
+from typing import Callable
 import yaml
 
 from flask import Flask
@@ -5,13 +8,29 @@ from flask import jsonify
 from flask import request
 from flask import Response
 
-allowed_methods = ['GET', 'POST', 'PUT', 'DELETE']
+from firebase_functions.manifest import ManifestStack
+
+__ALLOWED_METHODS = ['GET', 'POST', 'PUT', 'DELETE']
 
 
-def wrap_http_trigger(trig):
+def asdict_factory(data) -> dict:
+
+  def convert_value(obj):
+    if isinstance(obj, Enum):
+      return obj.value
+    return obj
+
+  return dict((k, convert_value(v)) for k, v in data)
+
+
+def wrap_http_trigger(trig: Callable) -> Callable:
 
   def wrapper():
-    return trig(request)
+
+    try:
+      return trig(request)
+    except TypeError:
+      return trig(request, Response())
 
   return wrapper
 
@@ -26,7 +45,7 @@ def wrap_pubsub_trigger(trig):
   return wrapper
 
 
-def clean_nones(value):
+def clean_nones(value) -> any:
   if isinstance(value, list):
     return [clean_nones(x) for x in value if x is not None]
   elif isinstance(value, dict):
@@ -37,59 +56,78 @@ def clean_nones(value):
     return value
 
 
-def wrap_backend_yaml(triggers):
+def wrap_functions_yaml(triggers) -> any:
+  """Wrapper around each trigger in the user's codebase."""
 
   def wrapper():
     trigger_data = [
-        add_entrypoint(trig.firebase_metadata, name)
-        for name, trig in triggers.items()
+        add_entrypoint(
+            name,
+            clean_nones(
+                dataclasses.asdict(trig.__endpoint__,
+                                   dict_factory=asdict_factory)),
+        ) for name, trig in triggers.items()
     ]
-    result = {'cloudFunctions': trigger_data}
-    response = yaml.dump(clean_nones(result))
+    result = ManifestStack(endpoints=trigger_data)
+    response = yaml.dump(clean_nones(result.__dict__))
     return Response(response, mimetype='text/yaml')
 
   return wrapper
 
 
-def add_entrypoint(yaml, name):
-  yaml['entryPoint'] = name
-  return yaml
+def add_entrypoint(name, trigger) -> dict:
+  """Add an entrypoint for a single function in the user's codebase."""
+  endpoint = {}
+  endpoint[name] = trigger
+  return endpoint
 
 
-def is_http_trigger(metadata):
-  trigger = metadata['trigger']
-  return trigger.get('eventType') is None
+def is_http_trigger(trigger) -> bool:
+  # If the function's trigger contains `httpsTrigger` attribute,
+  # then it's a https function.
+  return trigger.get('httpsTrigger') is not None
 
 
-def is_pubsub_trigger(metadata):
+def is_pubsub_trigger(metadata) -> bool:
   trigger = metadata['trigger']
   return trigger.get('eventType') == 'google.pubsub.topic.publish'
 
 
-def serve_triggers(triggers):
+def serve_triggers(triggers: list[Callable]) -> Flask:
+  """Start serving all triggers provided by the user locally.
+  Used by the generated `app` file upon deployment."""
   app = Flask(__name__)
 
   for name, trig in triggers.items():
-    metadata = trig.firebase_metadata
-    if is_http_trigger(metadata):
-      app.add_url_rule(f'/{name}',
-                       endpoint=name,
-                       view_func=wrap_http_trigger(trig),
-                       methods=allowed_methods)
-    elif is_pubsub_trigger(metadata):
-      app.add_url_rule(f'/{name}',
-                       endpoint=name,
-                       view_func=wrap_pubsub_trigger(trig),
-                       methods=['POST'])
+
+    trigger = getattr(trig, 'trigger')
+
+    if is_http_trigger(trigger):
+      app.add_url_rule(
+          f'/{name}',
+          endpoint=name,
+          view_func=wrap_http_trigger(trig),
+          methods=__ALLOWED_METHODS,
+      )
+    # elif is_pubsub_trigger(metadata):
+    #   app.add_url_rule(f'/{name}',
+    #                    endpoint=name,
+    #                    view_func=wrap_pubsub_trigger(trig),
+    #                    methods=['POST'])
     else:
-      raise ValueError('Unknown trigger type')
+      raise ValueError('Unknown trigger type!')
 
   return app
 
 
-def serve_admin(triggers):
+def serve_admin(triggers) -> Flask:
+  """Generate a specs `functions.yaml` file and serve it locally
+  on the path `<host>:<port>/__/functions.yaml`."""
+
   app = Flask(__name__)
-  app.add_url_rule('/__/functions.yaml',
-                   endpoint='functions.yaml',
-                   view_func=wrap_backend_yaml(triggers))
+  app.add_url_rule(
+      '/__/functions.yaml',
+      endpoint='functions.yaml',
+      view_func=wrap_functions_yaml(triggers),
+  )
   return app

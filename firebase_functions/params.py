@@ -1,8 +1,9 @@
 """Module for params that can make Cloud Functions codebases generic."""
+import os
+
 from dataclasses import dataclass
 from enum import Enum
 from typing import List, Tuple, Union, TypeVar, Generic, Optional
-import os
 
 T = TypeVar("T", int, float, str, Tuple[str])
 
