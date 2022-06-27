@@ -8,7 +8,7 @@ from flask import jsonify
 from flask import request
 from flask import Response
 
-from firebase_functions.manifest import ManifestStack
+from firebase_functions.manifest import ManifestEndpoint, ManifestStack
 
 __ALLOWED_METHODS = ['GET', 'POST', 'PUT', 'DELETE']
 
@@ -82,15 +82,14 @@ def add_entrypoint(name, trigger) -> dict:
   return endpoint
 
 
-def is_http_trigger(trigger) -> bool:
+def is_http_trigger(trigger: ManifestEndpoint) -> bool:
   # If the function's trigger contains `httpsTrigger` attribute,
   # then it's a https function.
-  return trigger.get('httpsTrigger') is not None
+  return trigger.httpsTrigger is not None or trigger.httpsTrigger != {}
 
 
-def is_pubsub_trigger(metadata) -> bool:
-  trigger = metadata['trigger']
-  return trigger.get('eventType') == 'google.pubsub.topic.publish'
+def is_pubsub_trigger(trigger: ManifestEndpoint) -> bool:
+  return trigger.eventTrigger['eventType'] == 'google.pubsub.topic.publish'
 
 
 def serve_triggers(triggers: list[Callable]) -> Flask:
@@ -100,7 +99,7 @@ def serve_triggers(triggers: list[Callable]) -> Flask:
 
   for name, trig in triggers.items():
 
-    trigger = getattr(trig, 'trigger')
+    trigger = getattr(trig, '__endpoint__')
 
     if is_http_trigger(trigger):
       app.add_url_rule(
@@ -109,11 +108,11 @@ def serve_triggers(triggers: list[Callable]) -> Flask:
           view_func=wrap_http_trigger(trig),
           methods=__ALLOWED_METHODS,
       )
-    # elif is_pubsub_trigger(metadata):
-    #   app.add_url_rule(f'/{name}',
-    #                    endpoint=name,
-    #                    view_func=wrap_pubsub_trigger(trig),
-    #                    methods=['POST'])
+    elif is_pubsub_trigger(trigger):
+      app.add_url_rule(f'/{name}',
+                       endpoint=name,
+                       view_func=wrap_pubsub_trigger(trig),
+                       methods=['POST'])
     else:
       raise ValueError('Unknown trigger type!')
 

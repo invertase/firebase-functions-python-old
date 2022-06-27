@@ -35,7 +35,7 @@ Clone this repo and install the requirements.
 
 * `firebase_functions` contains the experimental Functions SDK for Python.
   ```
-  python3 firebase_functions/setup.py install
+  python setup.py install
   ```
 
 * `sample.py` contains some sample user code written using the Functions SDK.
@@ -43,13 +43,13 @@ Clone this repo and install the requirements.
 * Run the codegen tool to generate an entrypoint. Save the output to a new
   `app.py` file.
   ```
-  python ./firebase_functions/codegen.py ./sample.py > app.py
+  python src/firebase_functions/codegen.py sample/main.py > sample/app.py
   ```
 * Start the Flask server to serve the generated entrypoint.
   ```
   gunicorn -b localhost:8080 app:app
   ```
-* Start a separate server to serve the `backend.yaml`.
+* Start a separate server to serve the `functions.yaml`.
   ```
   gunicorn -b localhost:8081 app:admin
   ```
