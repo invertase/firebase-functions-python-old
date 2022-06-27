@@ -9,8 +9,6 @@
 Install virtual environment `virtualenv` if you already haven't by going through this guide. 
 It makes it a lot easier to keep Python dependencies and modules isolated from the rest 
 of your environment.
-> **Note**
-> The minumum supported Python version is **3.9**.
 ```
 pip install --user virtualenv --python=3.9
 
@@ -18,17 +16,16 @@ pip install --user virtualenv --python=3.9
 # to your $PATH.
 ```
 1. Start by creating a virtual environment in your project directory.
+> **Note**
+> The minumum supported Python version is **3.9**.
     ```
-    python -m venv .env
+    python3.9 -m venv .env
     ```
 2. Activate the virtual environment you just created.
     ```
     source .env/bin/activate
     ```
-3. Install the library.
-    ```
-    pip install firebase_functions
-    ```
+
 ## Development setup
 Clone this repo and install the requirements.
 ## Running the example
