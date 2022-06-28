@@ -174,7 +174,7 @@ def on_request(
     allowed_origins: str = None,
     allowed_methods: str = None,
     region: Optional[str] = None,
-    memory: Union[None, int, params.IntParam, options.Sentinel] = None,
+    memory: Union[None, int, options.Memory, options.Sentinel] = None,
     timeout_sec: Optional[int] = None,
     min_instances: Union[None, int, params.IntParam, options.Sentinel] = None,
     max_instances: Union[None, int, params.IntParam, options.Sentinel] = None,

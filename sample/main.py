@@ -4,6 +4,7 @@ from firebase_functions.log import debug
 from firebase_functions.options import Memory, VpcEgressSettings, VpcOptions
 
 from firebase_functions.https import Response, on_request, on_call, Request, CallableRequest
+from firebase_functions.pubsub import CloudEventMessage, on_message_published
 
 
 # Sample of a HTTPS request CF.
@@ -24,7 +25,7 @@ def http_request_function(req: Request, res: Response):
 
   res.status_code = 200
 
-  return res
+  res.set_data("Hi")
 
 
 # Sample of a HTTPS callable CF.
@@ -32,6 +33,16 @@ def http_request_function(req: Request, res: Response):
 def http_callable_function(req: CallableRequest):
 
   debug('Debugging on_call')
-  debug('Data: ' + str(req.data))
+  debug(f'Data: {req.data}')
 
   return 'Hello World'
+
+
+# Sample of a Pub/Sub event CF.
+@on_message_published(topic='uid', memory=Memory.MB_256, region='europe-west-3')
+def pubsub_function(message: CloudEventMessage):
+
+  debug('Debugging pubsub_function')
+  debug(f'Data: {message}')
+
+  return ''

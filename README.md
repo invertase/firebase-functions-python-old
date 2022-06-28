@@ -9,8 +9,6 @@
 Install virtual environment `virtualenv` if you already haven't by going through this guide. 
 It makes it a lot easier to keep Python dependencies and modules isolated from the rest 
 of your environment.
-> **Note**
-> The minumum supported Python version is **3.9**.
 ```
 pip install --user virtualenv --python=3.9
 
@@ -18,24 +16,23 @@ pip install --user virtualenv --python=3.9
 # to your $PATH.
 ```
 1. Start by creating a virtual environment in your project directory.
+> **Note**
+> The minumum supported Python version is **3.9**.
     ```
-    python -m venv .env
+    python3.9 -m venv .env
     ```
 2. Activate the virtual environment you just created.
     ```
     source .env/bin/activate
     ```
-3. Install the library.
-    ```
-    pip install firebase_functions
-    ```
+
 ## Development setup
 Clone this repo and install the requirements.
 ## Running the example
 
 * `firebase_functions` contains the experimental Functions SDK for Python.
   ```
-  python3 firebase_functions/setup.py install
+  python setup.py install
   ```
 
 * `sample.py` contains some sample user code written using the Functions SDK.
@@ -43,13 +40,13 @@ Clone this repo and install the requirements.
 * Run the codegen tool to generate an entrypoint. Save the output to a new
   `app.py` file.
   ```
-  python ./firebase_functions/codegen.py ./sample.py > app.py
+  python src/firebase_functions/codegen.py sample/main.py > sample/app.py
   ```
 * Start the Flask server to serve the generated entrypoint.
   ```
   gunicorn -b localhost:8080 app:app
   ```
-* Start a separate server to serve the `backend.yaml`.
+* Start a separate server to serve the `functions.yaml`.
   ```
   gunicorn -b localhost:8081 app:admin
   ```
