@@ -1,5 +1,6 @@
 import dataclasses
 from enum import Enum
+import sys
 from typing import Callable
 import yaml
 
@@ -69,7 +70,9 @@ def wrap_functions_yaml(triggers) -> any:
         ) for name, trig in triggers.items()
     ]
     result = ManifestStack(endpoints=trigger_data)
-    response = yaml.dump(clean_nones(result.__dict__))
+    response = yaml.dump(clean_nones(result.__dict__),
+                         default_flow_style=False,
+                         default_style=None)
     return Response(response, mimetype='text/yaml')
 
   return wrapper
@@ -129,4 +132,11 @@ def serve_admin(triggers) -> Flask:
       endpoint='functions.yaml',
       view_func=wrap_functions_yaml(triggers),
   )
+
+  app.add_url_rule(
+      '/__/quitquitquit',
+      endpoint='quitquitquit',
+      view_func=sys.exit,
+  )
+
   return app
