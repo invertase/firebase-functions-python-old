@@ -1,3 +1,4 @@
+import asyncio
 import dataclasses
 from enum import Enum
 import sys
@@ -125,6 +126,11 @@ def serve_triggers(triggers: list[Callable]) -> Flask:
   return app
 
 
+def quitquitquit():
+  asyncio.get_event_loop().call_later(1, sys.exit)
+  return Response(status=200)
+
+
 def serve_admin(triggers) -> Flask:
   """Generate a specs `functions.yaml` file and serve it locally
   on the path `<host>:<port>/__/functions.yaml`."""
@@ -139,7 +145,7 @@ def serve_admin(triggers) -> Flask:
   app.add_url_rule(
       '/__/quitquitquit',
       endpoint='quitquitquit',
-      view_func=sys.exit,
+      view_func=quitquitquit,
   )
 
   return app
