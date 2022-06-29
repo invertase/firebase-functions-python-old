@@ -61,14 +61,17 @@ def wrap_functions_yaml(triggers) -> any:
   """Wrapper around each trigger in the user's codebase."""
 
   def wrapper():
-    trigger_data = [
-        add_entrypoint(
-            name,
-            clean_nones(
-                dataclasses.asdict(trig.__endpoint__,
-                                   dict_factory=asdict_factory)),
-        ) for name, trig in triggers.items()
-    ]
+    trigger_data = {}
+
+    for name, trig in triggers.items():
+      endpoint = add_entrypoint(
+          name,
+          clean_nones(
+              dataclasses.asdict(trig.__endpoint__,
+                                 dict_factory=asdict_factory)),
+      )
+      trigger_data.update(endpoint)
+
     result = ManifestStack(endpoints=trigger_data)
     response = yaml.dump(clean_nones(result.__dict__),
                          default_flow_style=False,
