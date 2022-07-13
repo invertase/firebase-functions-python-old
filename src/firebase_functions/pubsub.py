@@ -106,7 +106,7 @@ def on_message_published(
         eventTrigger=EventTrigger(
             eventType='google.cloud.pubsub.topic.v1.messagePublished',
             eventFilters={
-                'resource': f'projects/{project}/topics/{topic}',
+                'topic': f'projects/{project}/topics/{topic}',
             },
         ),
     )
