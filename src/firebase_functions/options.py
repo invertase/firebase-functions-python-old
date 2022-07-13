@@ -136,7 +136,7 @@ class PubSubOptions:
         'apiVersion': 1,
         'minInstances': self.min_instances,
         'trigger': {
-            'eventType': 'google.pubsub.topic.publish',
+            'eventType': 'google.cloud.pubsub.topic.v1.messagePublished',
             'eventFilters': {
                 'resource': f'projects/{project}/topics/{self.topic}',
             }

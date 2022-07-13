@@ -96,7 +96,8 @@ def is_http_trigger(trigger: ManifestEndpoint) -> bool:
 
 
 def is_pubsub_trigger(trigger: ManifestEndpoint) -> bool:
-  return trigger.eventTrigger['eventType'] == 'google.pubsub.topic.publish'
+  return trigger.eventTrigger[
+      'eventType'] == 'google.cloud.pubsub.topic.v1.messagePublished'
 
 
 def serve_triggers(triggers: list[Callable]) -> Flask:

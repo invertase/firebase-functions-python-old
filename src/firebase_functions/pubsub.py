@@ -104,7 +104,7 @@ def on_message_published(
         maxInstances=max_instances,
         minInstances=min_instances,
         eventTrigger=EventTrigger(
-            eventType='google.pubsub.topic.publish',
+            eventType='google.cloud.pubsub.topic.v1.messagePublished',
             eventFilters={
                 'resource': f'projects/{project}/topics/{topic}',
             },
