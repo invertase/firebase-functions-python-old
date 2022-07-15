@@ -1,11 +1,12 @@
 """Module for params that can make Cloud Functions codebases generic."""
-import os
 
+import os
+import abc
 from dataclasses import dataclass
 from enum import Enum
-from typing import List, Tuple, Union, TypeVar, Generic, Optional
+from typing import Iterable, Sequence, Union, TypeVar, Generic, Optional
 
-T = TypeVar("T", int, float, str, Tuple[str])
+T = TypeVar("T", int, float, str, Sequence[str])
 
 
 class Input(Generic[T]):
@@ -40,7 +41,7 @@ class TextInput(Input[T]):
 
 @dataclass(frozen=True)
 class SelectInput(Input[T]):
-  options: Union[List[T], List[SelectOption[T]]]
+  options: Union[Sequence[T], Sequence[SelectOption[T]]]
   """Input for this parameter should select from a predefined set of options.
 
     Attributes:
@@ -49,7 +50,7 @@ class SelectInput(Input[T]):
 
 
 @dataclass(frozen=True)
-class MultiselectInput(Input[List[str]]):
+class MultiselectInput(Input[Sequence[str]]):
   """Input for this parameter should select from a predefined set of options.
 
   May only be used for ListParams
@@ -58,7 +59,7 @@ class MultiselectInput(Input[List[str]]):
   Attributes:
       options: Options from which a value can be chosen.
   """
-  options: Union[List[str], List[SelectOption[str]]]
+  options: Union[Sequence[str], Sequence[SelectOption[str]]]
 
 
 class CheckboxInput(Input[bool]):
@@ -82,149 +83,77 @@ class ResourceInput(Input[str]):
   resource_type: ResourceType
 
 
-class _StringExpression:
-  pass
+E = TypeVar("E", str, int, float, bool, Iterable[str])
 
 
-@dataclass(frozen=True)
-class StringParam(_StringExpression):
-  """A string parameter.
+class Expression(abc.ABC, Generic[E]):
+  """ An abstract base class for all expressions """
 
-  Attributes:
-      name: The environment variable of this parameter. Must be upper case.
-      label: A human readable name for this parameter.
-      description: An optional description of this parameter.
-      default: What value the parameter should have if not specified.
-      immutable: Whether the value of this parameter can change between function
-        deployments.
-      input_type: Method of prompting a user for this variable. Defaults to
-        TextInput[str]
-  """
-  name: str
-  label: Optional[str] = None
-  description: Optional[str] = None
-  immutable: Optional[bool] = None
-  default: Union[None, str, _StringExpression] = None
-  input_type: Optional[Input[str]] = None
+  @abc.abstractmethod
+  def expression(self) -> str:
+    """ Returns the CEL for this expression """
+    pass
 
-  def __str__(self):
-    return f"{{{{ params.{self.name} }}}}"
+  def __str__(self) -> str:
+    """ Returns the full expression in a {{ }} escape sequence """
+    return f"{{ {self.expression} }}"
 
-  @property
-  def value(self) -> str:
-    """Current value of this parameter."""
-    return os.environ.get(self.name) or self.default or ""
-
-
-class _IntExpression:
-  pass
-
-
-@dataclass(frozen=True)
-class IntParam(_IntExpression):
-  """An int parameter.
-
-  Attributes:
-      name: The environment variable of this parameter. Must be upper case.
-      label: A human readable name for this parameter.
-      description: An optional description of this parameter.
-      default: What value the parameter should have if not specified.
-      immutable: Whether the value of this parameter can change between function
-        deployments.
-      input_type: Method of prompting a user for this variable. Defaults to
-        TextInput[int]
-  """
-  name: str
-  label: Optional[str] = None
-  description: Optional[str] = None
-  immutable: Optional[bool] = None
-  default: Optional[Union[None, int, _IntExpression]] = None
-  input_type: Optional[Input[int]] = None
-
-  def __str__(self):
-    return f"{{{{ params.{self.name} }}}}"
-
-  @property
-  def value(self) -> int:
-    """Current value of this parameter."""
-    return int(os.environ.get(self.name) or self.default or 0)
-
-
-class _FloatExpression:
-  pass
-
-
-@dataclass(frozen=True)
-class FloatParam(_FloatExpression):
-  """A float parameter.
-
-  Attributes:
-      name: The environment variable of this parameter. Must be upper case.
-      label: A human readable name for this parameter.
-      description: An optional description of this parameter.
-      default: What value the parameter should have if not specified.
-      immutable: Whether the value of this parameter can change between function
-        deployments.
-      input_type: Method of prompting a user for this variable. Defaults to
-        TextInput[float]
-  """
-  name: str
-  label: Optional[str] = None
-  description: Optional[str] = None
-  immutable: Optional[bool] = None
-  default: Union[None, int, _FloatExpression] = None
-  input_type: Optional[Input[float]] = None
-
-  def __str__(self):
-    return f"{{{{ params.{self.name} }}}}"
-
-  @property
-  def value(self) -> float:
-    """Current value of this parameter."""
+  @abc.abstractmethod
+  def value(self) -> E:
     pass
 
 
-class _ListExpression:
-  pass
+@dataclass(frozen=True)
+class _IfThenExpression(Expression[E]):
+  condition: Expression[bool]
+  then_val: E
+  else_val: E
+
+  def value(self) -> E:
+    if super().value():
+      return self.then_val
+    else:
+      return self.else_val
+
+  def expression(self) -> str:
+    return f"{self.condition.expression} ? {self.then_val} : {self.else_val}"
 
 
 @dataclass(frozen=True)
-class ListParam(_ListExpression):
-  """A list of string parameters.
+class BoolExpression(Expression[bool]):
+  """ A boolean expression supports boolean operators """
 
-  Attributes:
-      name: The environment variable of this parameter. Must be upper case.
-      label: A human readable name for this parameter.
-      description: An optional description of this parameter.
-      default: What value the parameter should have if not specified.
-      immutable: Whether the value of this parameter can change between function
-        deployments.
-      input_type: Method of prompting a user for this variable.
-  """
-  name: str
-  label: Optional[str] = None
-  description: Optional[str] = None
-  immutable: Optional[bool] = None
-  default: Optional[Union[None, List[str], _ListExpression]] = None
-  input_type: Union[None, Input[List[str]], List[str]] = None
-
-  def __str__(self):
-    return f"{{{{ params.{self.name} }}}}"
-
-  @property
-  def value(self) -> List[str]:
-    """Current value of this parameter."""
-    # TODO is split by coma right?
-    return os.environ.get(self.name).split(",") or self.default or []
-
-
-class _BoolExpression:
-  pass
+  def then(self, then_val: E, else_val: E) -> Expression[E]:
+    _IfThenExpression(condition=self, then_val=then_val, else_val=else_val)
 
 
 @dataclass(frozen=True)
-class BoolParam(_BoolExpression):
-  """A boolean parameter.
+class _EqualityExpression(BoolExpression):
+  left: Expression[E]
+  right: E
+
+  def value(self) -> E:
+    return self.left.value() == self.right
+
+  def expression(self) -> str:
+    return f"{self.left.expression()} == {self.right}"
+
+
+@dataclass(frozen=True)
+class ComparableExpression(Expression[E]):
+  """ An expression which supports the equals method """
+
+  def __eq__(self, val: E) -> BoolExpression:
+    """ A possibly too magical operator """
+    self.equals(E)
+
+  def equals(self, val: E) -> BoolExpression:
+    _EqualityExpression(left=self, right=val)
+
+
+@dataclass(frozen=True)
+class _Param(Expression[E]):
+  """ A param is a declared dependency on an external value.
 
   Attributes:
       name: The environment variable of this parameter. Must be upper case.
@@ -234,27 +163,75 @@ class BoolParam(_BoolExpression):
       immutable: Whether the value of this parameter can change between function
         deployments.
       input_type: Method of prompting a user for this variable. Defaults to
-        TextInput[float]
+        TextInput[E]
   """
   name: str
   label: Optional[str] = None
   description: Optional[str] = None
   immutable: Optional[bool] = None
-  default: Optional[Union[None, bool, _BoolExpression]] = None
-  input_type: Optional[Input[bool]] = None
+  default: Union[None, E, Expression[E]] = None
+  input_type: Optional[Input[E]] = None
 
-  def __str__(self):
-    return f"{{{{ params.{self.name} }}}}"
+  def expression(self) -> str:
+    return f"params.{self.name}"
 
-  @property
-  def value(self) -> bool:
-    """Current value of this parameter."""
-    return bool(os.environ.get(self.name) or self.default)
+  def value(self) -> E:
+    if os.environ.get(self.name) is not None:
+      return os.environ[self.name]
+    elif isinstance(self.default, Expression[E]):
+      return self.default.value()
+    elif self.default is not None:
+      return self.default
+    else:
+      return E()
+
+
+@dataclass(frozen=True)
+class StringParam(_Param[str], ComparableExpression[str]):
+  """ A string parameter """
+  pass
+
+
+@dataclass(frozen=True)
+class IntParam(_Param[int], ComparableExpression[int]):
+  """ An int parameter """
+  pass
+
+
+@dataclass(frozen=True)
+class FloatParam(_Param[float], ComparableExpression[float]):
+  """ A float parameter """
+  pass
+
+
+@dataclass(frozen=True)
+class ListParam(_Param[Iterable[str]]):
+  """ A list of strings parameter.  """
+
+  def value(self) -> E:
+    if os.environ.get(self.name) is not None:
+      return os.environ[self.name].split("\n")
+      # TODO. Should delim be a parameter here?
+    elif isinstance(self.default, Expression[Iterable[str]]):
+      return self.default.value()
+    elif self.default is not None:
+      return self.default
+    else:
+      return []
+
+
+@dataclass(frozen=True)
+class BoolParam(_Param[bool], BoolExpression):
+  """A boolean parameter """
+  pass
 
 
 @dataclass(frozen=True)
 class SecretParam:
   """A string parameter bound to a cloud secret.
+
+  A SecretParam is not an Expression; it cannot be used to configure the shape
+  of a deployment.
 
   Attributes:
       name: The environment variable of this parameter. Must be upper case.
@@ -273,7 +250,6 @@ class SecretParam:
   def __str__(self):
     return f"{{{{ params.{self.name} }}}}"
 
-  @property
   def value(self) -> str:
     """Current value of this parameter."""
     return str(os.environ.get(self.name) or self.default or "")

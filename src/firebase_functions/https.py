@@ -7,6 +7,8 @@ from dataclasses import dataclass
 from firebase_functions import params
 from firebase_functions import options
 from firebase_functions.manifest import ManifestEndpoint
+from firebase_functions.params import SecretParam, StringParam, IntParam
+from firebase_functions.options import Memory, VpcOptions, IngressSettings, Sentinel
 
 Request = FlaskRequest
 Response = FlaskResponse
@@ -174,15 +176,14 @@ def on_request(
     allowed_origins: str = None,
     allowed_methods: str = None,
     region: Optional[str] = None,
-    memory: Union[None, int, options.Memory, options.Sentinel] = None,
+    memory: Union[None, int, Memory, Sentinel] = None,
     timeout_sec: Optional[int] = None,
-    min_instances: Union[None, int, params.IntParam, options.Sentinel] = None,
-    max_instances: Union[None, int, params.IntParam, options.Sentinel] = None,
-    vpc: Union[None, options.VpcOptions, options.Sentinel] = None,
-    ingress: Union[None, options.IngressSettings, options.Sentinel] = None,
-    service_account: Union[None, str, params.StringParam,
-                           options.Sentinel] = None,
-    secrets: Union[None, List[str], params.ListParam, options.Sentinel] = None,
+    min_instances: Union[None, int, IntParam, Sentinel] = None,
+    max_instances: Union[None, int, IntParam, Sentinel] = None,
+    vpc: Union[None, VpcOptions, Sentinel] = None,
+    ingress: Union[None, IngressSettings, options.Sentinel] = None,
+    service_account: Union[None, str, StringParam, Sentinel] = None,
+    secrets: Union[None, List[str], SecretParam, Sentinel] = None,
 ):
   """Decorator for a function that handles raw HTTPS requests.
 
