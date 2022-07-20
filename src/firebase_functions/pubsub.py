@@ -6,8 +6,9 @@ import os
 from typing import Callable, Generic, TypeVar, Union
 from dataclasses import dataclass
 
-from firebase_functions import CloudEvent, options, params
+from firebase_functions import CloudEvent, options
 from firebase_functions.manifest import EventTrigger, ManifestEndpoint
+from firebase_functions.params import StringParam, IntParam, ListParam
 
 T = TypeVar('T')
 
@@ -63,17 +64,15 @@ class PubSubFunction(Callable[[CloudEventMessage], None]):
 def on_message_published(
     *,
     topic: str,
-    region: Union[None, str, params.StringParam, options.Sentinel] = None,
+    region: Union[None, str, StringParam, options.Sentinel] = None,
     memory: Union[None, int, options.Memory, options.Sentinel] = None,
-    timeout_sec: Union[None, int, params.IntParam, options.Sentinel] = None,
-    min_instances: Union[None, int, params._IntExpression,
-                         options.Sentinel] = None,
-    max_instances: Union[None, int, params.IntParam, options.Sentinel] = None,
+    timeout_sec: Union[None, int, IntParam, options.Sentinel] = None,
+    min_instances: Union[None, int, IntParam, options.Sentinel] = None,
+    max_instances: Union[None, int, IntParam, options.Sentinel] = None,
     vpc: Union[None, options.VpcOptions, options.Sentinel] = None,
     ingress: Union[None, options.IngressSettings, options.Sentinel] = None,
-    service_account: Union[None, str, params.StringParam,
-                           options.Sentinel] = None,
-    secrets: Union[None, list[str], params.ListParam, options.Sentinel] = None,
+    service_account: Union[None, str, StringParam, options.Sentinel] = None,
+    secrets: Union[None, list[str], ListParam, options.Sentinel] = None,
 ):
   """
       Decorator for functions that are triggered by Pub/Sub."""

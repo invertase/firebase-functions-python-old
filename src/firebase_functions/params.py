@@ -145,7 +145,7 @@ class ComparableExpression(Expression[E]):
 
   def __eq__(self, val: E) -> BoolExpression:
     """ A possibly too magical operator """
-    self.equals(E)
+    self.equals(val)
 
   def equals(self, val: E) -> BoolExpression:
     _EqualityExpression(left=self, right=val)

@@ -1,56 +1,30 @@
 """
-Https unit tests.
+Options unit tests.
 """
-import unittest
-
-from firebase_functions.options import GlobalOptions, HttpsOptions, set_global_options, _global_options
+import firebase_functions.options as options
 
 
-class TestGlobalOptions(unittest.TestCase):
+def test_set_global_options():
   """
-  Tests for Global Options.
+  Testing if setting the global options actually change the values.
   """
+  options.set_global_options(max_instances=1)
 
-  def test_set_global_options(self):
-    """
-    Testing if setting the global options actually change the values.
-    """
-    set_global_options()
-    test_global_options = GlobalOptions()
-
-    self.assertEqual(
-        _global_options.options, test_global_options,
-        "The global options should be the same as the test global options.")
-
-    set_global_options(max_instances=1)
-
-    self.assertNotEqual(
-        _global_options.options, test_global_options,
-        """ After setting the global options,
-        the global options should not be the same as the test global options."""
-    )
-
-  def test_https_options(self):
-    """
-    Testing if setting the global options actually change the values.
-    """
-    set_global_options()
-    https_options = HttpsOptions()
-
-    self.assertEqual(_global_options.options, https_options,
-                     """ HttpsOptions is an instance of GlobalOptions """)
-
-    https_options = HttpsOptions(max_instances=1)
-
-    self.assertNotEqual(
-        _global_options.options, https_options,
-        """ HttpsOptions is not equal to the global options """)
-
-    set_global_options(max_instances=1)
-
-    self.assertEqual(_global_options.options, https_options,
-                     """ HttpsOptions is equal to the global options """)
+  assert options.global_options.max_instances == 1
 
 
-if __name__ == "__main__":
-  unittest.main()
+def test_https_options():
+  """
+  Testing if setting the global options actually change the values.
+  """
+  options.set_global_options(max_instances=1)
+
+  assert options.global_options.max_instances == 1
+
+  https_options_1 = options.HttpsOptions()
+
+  assert https_options_1.max_instances == options.global_options.max_instances
+
+  https_options_2 = options.HttpsOptions(max_instances=3)
+
+  assert https_options_2.max_instances != options.global_options.max_instances
