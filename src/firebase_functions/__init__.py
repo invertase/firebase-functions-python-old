@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 import datetime
-from typing import Generic, TypeVar
+from typing import Generic, Set, TypeVar
+import firebase_admin
 
 T = TypeVar("T")
 
@@ -13,3 +14,13 @@ class CloudEvent(Generic[T]):
   type: str
   time: datetime
   data: T
+
+
+_apps: Set[firebase_admin.App]
+
+
+def apps() -> firebase_admin.App:
+  global _apps
+  if _apps is None:
+    _apps = {firebase_admin.initialize_app()}
+  return _apps[0]

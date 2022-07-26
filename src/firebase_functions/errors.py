@@ -52,6 +52,14 @@ class HttpErrorCode():
   canonical_name: CanonicalErrorCodeName
   status: int
 
+  def __init__(
+      self,
+      canonical_name: FunctionsErrorCode,
+      status: str,
+  ):
+    self.canonical_name = canonical_name
+    self.status = status
+
 
 error_code_map = {
     FunctionsErrorCode.ok:

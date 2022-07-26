@@ -56,8 +56,9 @@ Clone this repo and install the requirements.
   ```
 * To trigger the HTTP CALL function:
   ```
-    curl -X POST \
-    -d '{"username":"xyz","password":"xyz"}' \
+    curl --header "Content-Type: application/json" \
+  --request POST \
+  --data '{"data": {"username": "xyz"}, "username":"xyz","password":"xyz"}' \
     localhost:8080/http_callable_function
   ```
 * To trigger the PubSub function:

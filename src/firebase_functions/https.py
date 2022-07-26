@@ -1,14 +1,24 @@
+from asyncio import FastChildWatcher
+import asyncio
+from asyncio.log import logger
+from enum import Enum
 import functools
-from firebase_functions.errors import FunctionsErrorCode, HttpsError
-
-from flask import Response as FlaskResponse, Request as FlaskRequest
-from typing import Any, Callable, Generic, List, TypeVar, Union, Optional
+import json
+import re
+from flask import Response as FlaskResponse, Request as FlaskRequest, jsonify
+from typing import (Any, Generic, List, TypeVar, Union, Optional)
 from dataclasses import dataclass
+from collections.abc import Callable
+from firebase_admin import auth
 
-from manifest import ManifestEndpoint
-from params import (SecretParam, StringParam, IntParam, ListParam)
-from options import (HttpsOptions, Memory, VpcOptions, IngressSettings,
-                     Sentinel)
+from firebase_functions import apps
+from firebase_functions.log import (error, info, warn)
+from firebase_functions.errors import FunctionsErrorCode, HttpsError
+from firebase_functions.manifest import ManifestEndpoint
+from firebase_functions.params import (SecretParam, StringParam, IntParam,
+                                       ListParam)
+from firebase_functions.options import (HttpsOptions, Memory, VpcOptions,
+                                        IngressSettings, Sentinel)
 
 Request = FlaskRequest
 Response = FlaskResponse
@@ -35,16 +45,16 @@ class DecodedAppCheckToken:
   sub: StringParam
   '''The audience for which this token is IntParamended.
 
-  This value is a JSON array of two StringParamings, the first is the project 
-  number of your Firebase project, and the second is the project ID of the same
-  project.
+  This value is a JSON array of two StringParamings, the first is
+  the project number of your Firebase project, and the second is the
+  project ID of the same project.
   '''
 
   aud: List[StringParam]
   '''The audience for which this token is IntParamended.
 
-  This value is a JSON array of two StringParamings, the first is the project 
-  number of your Firebase project, and the second is the project ID of the 
+  This value is a JSON array of two StringParamings, the first is the project
+  number of your Firebase project, and the second is the project ID of the
   same project.
   '''
 
@@ -99,52 +109,23 @@ class AuthData:
 class CallableRequest(Generic[T]):
   '''The request sent to a callable function.'''
 
-  data: T
-  '''The arguments passed in the call.'''
-
-  app: AppCheckData
-  '''The application which made the call.'''
-
-  auth: AuthData
-  '''The user who made the call.'''
-
-  instance_id_token: StringParam
-  '''An unverified token for a Firebase Instance ID.'''
-
   raw_request: Request
   '''The raw request handled by the callable.'''
 
+  data: Optional[T] = None
+  '''The arguments passed in the call.'''
 
-class HttpsFunction(Callable):
-  '''Function type for https decorators.'''
+  app: Optional[AppCheckData] = None
+  '''The application which made the call.'''
 
-  def __init__(self, request: Request) -> Response:
-    self.__trigger__ = None
-    self.__endoint__ = None
+  auth: Optional[AuthData] = None
+  '''The user who made the call.'''
 
-    super().__init__(request)
-
-  @property
-  def trigger(self):
-    return self.__trigger__
-
-  @trigger.setter
-  def trigger(self, v):
-    self.__trigger__ = v
-
-  @property
-  def endoint(self):
-    return self.__endoint__
-
-  @endoint.setter
-  def endoint(self, v):
-    self.__endpoint__ = v
+  instance_id_token: Optional[StringParam] = None
+  '''An unverified token for a Firebase Instance ID.'''
 
 
-class CallableFunction(HttpsFunction):
-
-  def __init__(self, request: CallableRequest[T]) -> Any:
-    super().__init__(request)
+C = TypeVar('C', bound=Callable)
 
 
 def on_request(
@@ -159,7 +140,7 @@ def on_request(
     ingress: Union[None, IngressSettings, Sentinel] = None,
     service_account: Union[None, StringParam, StringParam, Sentinel] = None,
     secrets: Union[None, List[StringParam], SecretParam, Sentinel] = None,
-):
+) -> Callable[[FlaskRequest], FlaskResponse]:
   """Decorator for a function that handles raw HTTPS requests.
 
   Parameters:
@@ -202,7 +183,6 @@ def on_request(
   )
 
   metadata = {} if request_options is None else request_options.metadata()
-
   trigger = {
       'platform': 'gcfv2',
       **metadata, 'labels': {},
@@ -211,14 +191,13 @@ def on_request(
       }
   }
 
-  def https_with_options(func: HttpsFunction):
+  def wrapper(func: Callable[[FlaskRequest], FlaskResponse]) -> Any:
+    metadata['id'] = func.__name__
 
     @functools.wraps(func)
-    def wrapper_func(request: FlaskRequest) -> FlaskResponse:
+    def request_view_func(request: FlaskRequest) -> FlaskResponse:
 
       return func(request)
-
-    metadata['id'] = func.__name__
 
     manifest = ManifestEndpoint(
         entryPoint=func.__name__,
@@ -232,28 +211,244 @@ def on_request(
         minInstances=min_instances,
     )
 
-    wrapper_func.firebase_metadata = metadata
-    wrapper_func.trigger = trigger
-    wrapper_func.__endpoint__ = manifest
+    request_view_func.firebase_metadata = metadata
+    request_view_func.trigger = trigger
+    request_view_func.__endpoint__ = manifest
 
-    return wrapper_func
+    return request_view_func
 
-  return https_with_options
+  return wrapper
+
+
+class TokenStatus(Enum):
+  '''The status of a token.'''
+
+  MISSING = 'MISSING'
+  '''The token is missing.'''
+
+  VALID = 'VALID'
+  '''The token is valid.'''
+
+  INVALID = 'INVALID'
+  '''The token is invalid.'''
+
+
+class CallableTokenStatus():
+  app: TokenStatus = None
+  auth: TokenStatus = None
+
+  def __init__(self) -> None:
+    self.app = TokenStatus.INVALID
+    self.auth = TokenStatus.INVALID
+
+  def to_dict(self) -> dict:
+    return {
+        'app': self.app.value,
+        'auth': self.auth.value,
+    }
+
+
+def check_auth_token(req: FlaskRequest, ctx: CallableRequest) -> TokenStatus:
+  ''' Validate the auth token in the callable request. '''
+  authorization = req.headers.get('Authorization')
+  if authorization is None:
+    return TokenStatus.MISSING
+  match = re.search(r'Bearer (.*)', authorization)
+  if match is not None:
+    try:
+      id_token = match.string
+      auth_token = {}
+      auth.verify_id_token(id_token, app=apps())
+      ctx.auth = AuthData(uid=auth_token['uid'], token=auth_token)
+      return TokenStatus.VALID
+    except auth.InvalidIdTokenError as e:
+      error(f'Error validating token: {e}')
+      return TokenStatus.INVALID
+
+
+def check_app_token(req: FlaskRequest, ctx: CallableRequest) -> TokenStatus:
+  ''' Validate the app token in the callable request. '''
+  app_check = req.headers.get('X-Firebase-AppCheck')
+  if app_check is None:
+    return TokenStatus.MISSING
+  try:
+    if 1 != app_check:
+      # TODO validate the Admin SDK can validate app check token
+      raise NotImplementedError(
+          'AppCheck module is not yet supported in the Admin SDK.')
+    # TODO validate the token using the Admin SDK
+    # https://github.com/firebase/firebase-functions/blob/a00ad925ce5a24124d5354d1ff533bb7bd0f8c76/src/common/providers/https.ts#L675-L688
+    app_check_token = None
+    ctx.app = AppCheckData(app_id=app_check_token.token,
+                           token=app_check_token.app_id)
+    return TokenStatus.VALID
+  except auth.InvalidIdTokenError as e:
+    error(f'Error validating token: {e}')
+    return TokenStatus.INVALID
+
+
+def check_tokens(
+    req: FlaskRequest,
+    ctx: CallableRequest,
+) -> CallableTokenStatus:
+  verifications = CallableTokenStatus()
+
+  verifications.auth = check_auth_token(req, ctx)
+  verifications.app = check_app_token(req, ctx)
+
+  log_payload = {
+      **verifications.to_dict(),
+      'logging.googleapis.com/labels': {
+          'firebase-log-type': 'callable-request-verification',
+      },
+  }
+
+  errs = []
+  if verifications.app == TokenStatus.INVALID:
+    errs.push('AppCheck token was rejected.', log_payload)
+
+  if verifications.auth == TokenStatus.INVALID:
+    errs.push('Auth token was rejected.', log_payload)
+
+  if len(errs) == 0:
+    info('Callable request verification passed', log_payload)
+  else:
+    warn(f'Callable request verification failed: ${errs}', log_payload)
+
+  # Clears out the content in the logPayload
+  # or it will be persisted in the next call.
+  log_payload.clear()
+
+  return verifications
 
 
 def valid_request(request: FlaskRequest) -> bool:
-  pass
+  # The body must not be empty.
+  if request.json is None:
+    logger.debug('Request is missing body.')
+    warn('Request is missing body.')
+    return False
+
+  # Make sure it's a POST.
+  if request.method != 'POST':
+    logger.debug('Request has invalid method.')
+    warn('Request has invalid method.', request.method)
+    return False
+
+  # Check that the Content-Type is JSON.
+  content_type: str = request.headers.get('Content-Type').lower()
+
+  # If it has a charset, just ignore it for now.
+  semi_colon = 0
+
+  try:
+    semi_colon = content_type.index(';')
+    if semi_colon >= 0:
+      content_type = content_type[0:semi_colon].strip()
+  except ValueError:
+    pass
+
+  if content_type != 'application/json':
+
+    logger.debug('Request has incorrect Content-Type.')
+    warn('Request has incorrect Content-Type.', content_type)
+    return False
+
+  # The body must have data.
+  if request.json == 'undefined':
+    logger.debug('Request body is missing data.')
+    warn('Request body is missing data.', request.json)
+    return False
+
+  extra_keys = {}
+
+  # Verify that the body does not have any extra fields.
+  for key in request.json.keys():
+    if key != 'data':
+      extra_keys.update({key: request.json[key]})
+
+  if len(extra_keys) != 0:
+    warn(
+        'Request body has extra fields: ',
+        ''.join(f'{key}: {value},' for (key, value) in extra_keys.items()),
+    )
+    return FastChildWatcher
+
+  return True
+
+
+class HttpResponseBody:
+  '''The body of an HTTP response from a callable function.'''
+  result: Optional[Any] = None
+  error: Optional[HttpsError] = None
 
 
 def wrap_on_call_handler(
+    func: Callable[[FlaskRequest], FlaskResponse],
     request: FlaskRequest,
+    response: FlaskResponse,
     options: HttpsOptions,
 ) -> CallableRequest[T]:
   if not valid_request(request):
+    # TODO use the Cloud Logger to log an error entry.
     raise HttpsError(FunctionsErrorCode.invalid_argument, 'Bad Request')
+
+  context = CallableRequest(raw_request=request)
+  token_status = check_tokens(request, context)
+
+  if token_status.auth == TokenStatus.INVALID:
+    raise HttpsError('unauthenticated', 'Unauthenticated')
+
+  if token_status.app == TokenStatus.INVALID and not options.allow_invalid_app_check_token:
+    raise HttpsError('unauthenticated', 'Unauthenticated')
+
+  instance_id = request.headers.get('Firebase-Instance-ID-Token')
+  if instance_id is not None:
+    # Validating the token requires an http request, so we don't do it.
+    # If the user wants to use it for something, it will be validated then.
+    # Currently, the only real use case for this token is for sending
+    # pushes with FCM. In that case, the FCM APIs will validate the token.
+    context.instance_id_token = request.headers.get(
+        'Firebase-Instance-ID-Token')
+
+  data = json.loads(request.data)
+  result: Response
+
+  arg: CallableRequest = CallableRequest(
+      raw_request=context.raw_request,
+      data=data,
+      auth=context.auth,
+      app=context.app,
+      instance_id_token=context.instance_id_token,
+  )
+
+  try:
+    result = func(arg)
+
+    response_body = jsonify(data=result,
+                            status=200,
+                            mimetype='application/json')
+
+    response = response_body
+  except Exception as err:
+    if not isinstance(err, HttpsError):
+      error('Unhandled error', err)
+      err = HttpsError(FunctionsErrorCode.internal, 'INTERNAL')
+
+    status = err.httpErrorCode.status
+    response_body = {'error': jsonify(error=err.toJSON())}
+
+    response_body = jsonify(error=err.to_dict(),
+                            status=status,
+                            mimetype='application/json')
+
+    response = response_body
+
+  return response
 
 
 def on_call(
+    *,
     allowed_origins: StringParam = None,
     allowed_methods: StringParam = None,
     region: Optional[StringParam] = None,
@@ -265,7 +460,7 @@ def on_call(
     ingress: Union[None, IngressSettings, Sentinel] = None,
     service_account: Union[None, StringParam, Sentinel] = None,
     secrets: Union[None, List[StringParam], ListParam, Sentinel] = None,
-):
+) -> Callable[[CallableRequest], Any]:
   '''Decorator for a function that can be called like an RPC service.
 
   Parameters:
@@ -320,17 +515,22 @@ def on_call(
   metadata['apiVersion'] = 1
   metadata['trigger'] = {}
 
-  def https_with_options(func: CallableFunction):
-
-    @functools.wraps(func)
-    def call_view_func(request: FlaskRequest) -> any:
-
-      return func(wrap_on_call_handler(request, callable_options))
+  def wrapper(func):
 
     metadata['id'] = func.__name__
 
+    @functools.wraps(func)
+    def call_view_func(request: FlaskRequest,
+                       response: FlaskResponse = None) -> Any:
+      return wrap_on_call_handler(
+          func,
+          request,
+          response if response is not None else Response(),
+          callable_options,
+      )
+
     manifest = ManifestEndpoint(
-        entryPoint=func.__name__,
+        entryPoint=metadata['id'],
         region=region,
         platform='gcfv2',
         labels={},
@@ -347,4 +547,4 @@ def on_call(
 
     return call_view_func
 
-  return https_with_options
+  return wrapper

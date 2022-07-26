@@ -78,9 +78,18 @@ def on_message_published(
       Decorator for functions that are triggered by Pub/Sub."""
 
   # Construct an Options object out from the args passed by the user, if any.
-  pubsub_options = options.PubSubOptions(topic, region, memory, timeout_sec,
-                                         min_instances, max_instances, vpc,
-                                         ingress, service_account, secrets)
+  pubsub_options = options.PubSubOptions(
+      topic=topic,
+      region=region,
+      memory=memory,
+      timeout_sec=timeout_sec,
+      min_instances=min_instances,
+      max_instances=max_instances,
+      vpc=vpc,
+      ingress=ingress,
+      service_account=service_account,
+      secrets=secrets,
+  )
   metadata = {}
   metadata = {} if pubsub_options is None else pubsub_options.metadata()
 

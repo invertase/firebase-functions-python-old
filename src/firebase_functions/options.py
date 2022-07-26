@@ -54,7 +54,7 @@ class Memory(Enum):
   GB_8 = 8 << 10
 
 
-@dataclass(frozen=True)
+@dataclass()
 class GlobalOptions:
   '''Options available for all function types in a codebase.
 
@@ -103,7 +103,7 @@ class GlobalOptions:
 global_options = GlobalOptions()
 
 
-@dataclass(frozen=True)
+@dataclass()
 class HttpsOptions(GlobalOptions):
   '''Options available for all function types in a codebase.
 
@@ -123,53 +123,16 @@ class HttpsOptions(GlobalOptions):
           the default compute service account.
   '''
 
-  allowed_origins: Optional[str]
-  allowed_methods: Optional[str]
-  region: Optional[str]
-  memory: Union[None, int, Sentinel]
-  timeout_sec: Union[None, int, Sentinel]
-  min_instances: Union[None, int, Sentinel]
-  max_instances: Union[None, IntParam, Sentinel]
-  vpc: Union[None, VpcOptions, Sentinel]
-  ingress: Union[None, IngressSettings, Sentinel]
-  service_account: Union[None, str, Sentinel]
-  secrets: Union[None, List[str], list, Sentinel]
-
-  def __init__(
-      self,
-      allowed_origins: Optional[str] = None,
-      allowed_methods: Optional[str] = None,
-      region: Optional[str] = None,
-      memory: Union[None, int, Sentinel] = None,
-      timeout_sec: Union[None, int, Sentinel] = None,
-      min_instances: Union[None, int, Sentinel] = None,
-      max_instances: Union[None, IntParam, Sentinel] = None,
-      vpc: Union[None, IngressSettings, Sentinel] = None,
-      ingress: Union[None, VpcOptions, Sentinel] = None,
-      service_account: Union[None, str, Sentinel] = None,
-      secrets: Union[None, List[str], list, Sentinel] = None,
-  ):
-
-    super().__init__(
-        allowed_origins=allowed_origins or global_options.allowed_origins,
-        allowed_methods=allowed_methods or global_options.allowed_methods,
-        region=region or global_options.region,
-        memory=memory or global_options.memory,
-        timeout_sec=timeout_sec or global_options.timeout_sec,
-        min_instances=min_instances or global_options.min_instances,
-        max_instances=max_instances or global_options.max_instances,
-        vpc=vpc or global_options.vpc,
-        ingress=ingress or global_options.ingress,
-        service_account=service_account or global_options.service_account,
-        secrets=secrets or global_options.secrets,
-    )
+  def __post_init__(self):
+    self.max_instances = self.max_instances or global_options.max_instances
 
 
-@dataclass(frozen=True)
+@dataclass()
 class PubSubOptions(GlobalOptions):
   '''Options available for all Pub/Sub function types in a codebase.
 
   Attributes:
+      topic: The name of the Pub/Sub topic.
       region: (StringParam) Region to deploy functions. Defaults to us-central1.
       memory: MB to allocate to function. Defaults to Memory.MB_256
       timeout_sec: Seconds before a function fails with a timeout error.
@@ -184,10 +147,11 @@ class PubSubOptions(GlobalOptions):
       service_account: The service account a function should run as. Defaults to
           the default compute service account.
   '''
-  topic: str = None
+
+  topic: Optional[str] = None
 
   def __post_init__(self):
-    self.set_from_global_options()
+    self.max_instances = self.max_instances or global_options.max_instances
 
   def metadata(self):
     project = os.environ.get('GCLOUD_PROJECT')
@@ -201,19 +165,6 @@ class PubSubOptions(GlobalOptions):
         },
         **super().metadata()
     }
-
-  def set_from_global_options(self):
-    '''Set options from global options. '''
-    self.allowed_origins = global_options.allowed_origins
-    self.allowed_methods = global_options.allowed_methods
-    self.region = global_options.region
-    self.memory = global_options.memory
-    self.timeout_sec = global_options.timeout_sec
-    self.min_instances = global_options.min_instances
-    self.max_instances = global_options.max_instances
-    self.vpc = global_options.vpc
-    self.ingress = global_options.ingress
-    self.service_account = global_options.service_account
 
 
 def set_global_options(*,
