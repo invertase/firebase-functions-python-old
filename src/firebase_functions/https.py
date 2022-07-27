@@ -425,9 +425,7 @@ def wrap_on_call_handler(
   try:
     result = func(arg)
 
-    response_body = jsonify(data=result,
-                            status=200,
-                            mimetype='application/json')
+    response_body = jsonify(data=result, status=200)
 
     response = response_body
   except Exception as err:
@@ -437,9 +435,7 @@ def wrap_on_call_handler(
 
     status = err.http_error_code.status
 
-    response_body = jsonify(error=err.to_dict(),
-                            status=status,
-                            mimetype='application/json')
+    response_body = jsonify(error=err.to_dict(), status=status)
 
     response = response_body
 
