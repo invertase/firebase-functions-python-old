@@ -16,11 +16,11 @@ class CloudEvent(Generic[T]):
   data: T
 
 
-_apps: Set[firebase_admin.App]
+_apps: Set[firebase_admin.App] = None
 
 
 def apps() -> firebase_admin.App:
   global _apps
   if _apps is None:
     _apps = {firebase_admin.initialize_app()}
-  return _apps[0]
+  return _apps.pop()
