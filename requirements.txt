@@ -1,6 +1,6 @@
 pytest >= 7.1.2
 pylint>=2.13.9
-pyyaml>=5.1
+pyyaml>=6.0
 yapf>=0.32.0
 flask>=2.1.2
 gunicorn>=20.1.0
