@@ -5,7 +5,7 @@ from enum import Enum
 from typing import Any, Optional, TypedDict
 
 
-class CanonicalErrorCodeName(Enum):
+class CanonicalErrorCodeName(str, Enum):
   """The canonical error code name for a given error code."""
   OK = 'OK'
   CANCELLED = 'CANCELLED'
