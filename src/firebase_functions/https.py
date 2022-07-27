@@ -243,8 +243,8 @@ class CallableTokenStatus():
 
   def to_dict(self) -> dict:
     return {
-        'app': self.app.value,
-        'auth': self.auth.value,
+        'app': self.app.value if self.app is not None else None,
+        'auth': self.auth.value if self.auth is not None else None,
     }
 
 
