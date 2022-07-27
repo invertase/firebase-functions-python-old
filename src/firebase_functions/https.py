@@ -397,10 +397,10 @@ def wrap_on_call_handler(
   token_status = check_tokens(request, context)
 
   if token_status.auth == TokenStatus.INVALID:
-    raise HttpsError('unauthenticated', 'Unauthenticated')
+    raise HttpsError(FunctionsErrorCode.unauthenticated, 'Unauthenticated')
 
   if token_status.app == TokenStatus.INVALID and not options.allow_invalid_app_check_token:
-    raise HttpsError('unauthenticated', 'Unauthenticated')
+    raise HttpsError(FunctionsErrorCode.unauthenticated, 'Unauthenticated')
 
   instance_id = request.headers.get('Firebase-Instance-ID-Token')
   if instance_id is not None:
@@ -435,8 +435,7 @@ def wrap_on_call_handler(
       error('Unhandled error', err)
       err = HttpsError(FunctionsErrorCode.internal, 'INTERNAL')
 
-    status = err.httpErrorCode.status
-    response_body = {'error': jsonify(error=err.toJSON())}
+    status = err.http_error_code.status
 
     response_body = jsonify(error=err.to_dict(),
                             status=status,
