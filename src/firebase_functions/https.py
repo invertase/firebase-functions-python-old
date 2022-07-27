@@ -305,10 +305,10 @@ def check_tokens(
 
   errs = []
   if verifications.app == TokenStatus.INVALID:
-    errs.push('AppCheck token was rejected.', log_payload)
+    errs.append('AppCheck token was rejected.', log_payload)
 
   if verifications.auth == TokenStatus.INVALID:
-    errs.push('Auth token was rejected.', log_payload)
+    errs.append('Auth token was rejected.', log_payload)
 
   if len(errs) == 0:
     info('Callable request verification passed', log_payload)
