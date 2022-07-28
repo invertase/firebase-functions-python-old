@@ -1,6 +1,5 @@
 """ Errors and exceptions in this package. """
 
-from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Optional, TypedDict
 
@@ -28,23 +27,23 @@ class CanonicalErrorCodeName(str, Enum):
 
 class FunctionsErrorCode(str, Enum):
   """The error code for a given error."""
-  OK: str = 'ok'
-  CANCELLED: str = 'cancelled'
-  UNKNOWN: str = 'unknown'
-  INVALID_ARGUMENT: str = 'invalid-argument'
-  DEADLINE_EXCEEDED: str = 'deadline-exceeded'
-  NOT_FOUND: str = 'not-found'
-  ALREADY_EXISTS: str = 'already-exists'
-  PERMISSION_DENIED: str = 'permission-denied'
-  UNAUTHENTICATED: str = 'unauthenticated'
-  REASOURCE_EXHAUSTED: str = 'resource-exhausted'
-  FAILED_PRECONDITION: str = 'failed-precondition'
-  ABORTED: str = 'aborted'
-  OUT_OF_RANGE: str = 'out-of-range'
-  UNIMPLEMENTED: str = 'unimplemented'
-  INTERNAL: str = 'internal'
-  UNAVAILABLE: str = 'unavailable'
-  DATA_LOSS: str = 'data-loss'
+  OK = 'ok'
+  CANCELLED = 'cancelled'
+  UNKNOWN = 'unknown'
+  INVALID_ARGUMENT = 'invalid-argument'
+  DEADLINE_EXCEEDED = 'deadline-exceeded'
+  NOT_FOUND = 'not-found'
+  ALREADY_EXISTS = 'already-exists'
+  PERMISSION_DENIED = 'permission-denied'
+  UNAUTHENTICATED = 'unauthenticated'
+  REASOURCE_EXHAUSTED = 'resource-exhausted'
+  FAILED_PRECONDITION = 'failed-precondition'
+  ABORTED = 'aborted'
+  OUT_OF_RANGE = 'out-of-range'
+  UNIMPLEMENTED = 'unimplemented'
+  INTERNAL = 'internal'
+  UNAVAILABLE = 'unavailable'
+  DATA_LOSS = 'data-loss'
 
 
 class HttpErrorCode():
