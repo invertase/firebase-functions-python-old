@@ -57,6 +57,7 @@ Clone this repo and install the requirements.
 * To trigger the HTTP CALL function:
   ```
     curl --header "Content-Type: application/json" \
+    --header "Authorization: Bearer fgffff" \
   --request POST \
   --data '{"data": {"username": "xyz"}, "username":"xyz","password":"xyz"}' \
     localhost:8080/http_callable_function

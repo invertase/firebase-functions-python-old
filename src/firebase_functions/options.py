@@ -3,7 +3,7 @@ from dataclasses import dataclass
 import os
 from typing import List, Optional, Union
 
-from firebase_functions.params import IntParam
+from firebase_functions.params import IntParam, ListParam, SecretParam, StringParam
 
 
 class Sentinel:
@@ -44,7 +44,7 @@ class IngressSettings(str, Enum):
   ALLOW_INTERNAL_AND_GCLB = 'ALLOW_INTERNAL_AND_GCLB'
 
 
-class Memory(Enum):
+class Memory(int, Enum):
   '''Valid memory settings.'''
   MB_256 = 256
   MB_512 = 512
@@ -73,17 +73,19 @@ class GlobalOptions:
       service_account: The service account a function should run as. Defaults to
           the default compute service account.
   '''
-  allowed_origins: str = None
-  allowed_methods: str = None
-  region: Optional[str] = None
-  memory: Union[None, int, Sentinel] = None
-  timeout_sec: Union[None, int, Sentinel] = None
-  min_instances: Union[None, int, Sentinel] = None
-  max_instances: Union[None, IntParam, Sentinel] = None
-  vpc: Union[None, VpcOptions, Sentinel] = None
-  ingress: Union[None, IngressSettings, Sentinel] = None
-  service_account: Union[None, str, Sentinel] = None
-  secrets: Union[None, List[str], list, Sentinel] = None
+  allowed_origins: Union[StringParam, str,
+                         None] = None  # TODO should we add Sentinel?
+  allowed_methods: Union[StringParam, str,
+                         None] = None  # TODO should we add Sentinel?
+  region: Union[StringParam, str, None] = None  # TODO should we add Sentinel?
+  memory: Union[Memory, IntParam, int, Sentinel, None] = None
+  timeout_sec: Union[IntParam, int, Sentinel, None] = None
+  min_instances: Union[IntParam, int, Sentinel, None] = None
+  max_instances: Union[None, IntParam, int, Sentinel] = None
+  vpc: Union[VpcOptions, Sentinel, None] = None
+  ingress: Union[IngressSettings, Sentinel, None] = None
+  service_account: Union[StringParam, str, Sentinel, None] = None
+  secrets: Union[List[StringParam], SecretParam, Sentinel, None] = None
 
   def metadata(self):
     return {
@@ -122,6 +124,8 @@ class HttpsOptions(GlobalOptions):
       service_account: The service account a function should run as. Defaults to
           the default compute service account.
   '''
+
+  allow_invalid_app_check_token: Optional[bool] = None
 
   def __post_init__(self):
     self.max_instances = self.max_instances or global_options.max_instances

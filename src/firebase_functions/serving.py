@@ -2,8 +2,8 @@ import asyncio
 import dataclasses
 from enum import Enum
 import sys
-from typing import Callable
-import yaml
+from typing import Any, Callable
+from yaml import load, dump
 
 from flask import Flask
 from flask import jsonify
@@ -47,7 +47,7 @@ def wrap_pubsub_trigger(trig):
   return wrapper
 
 
-def clean_nones(value) -> any:
+def clean_nones(value) -> Any:
   if isinstance(value, list):
     return [clean_nones(x) for x in value if x is not None]
   elif isinstance(value, dict):
@@ -58,7 +58,7 @@ def clean_nones(value) -> any:
     return value
 
 
-def wrap_functions_yaml(triggers) -> any:
+def wrap_functions_yaml(triggers) -> Any:
   """Wrapper around each trigger in the user's codebase."""
 
   def wrapper():
@@ -74,9 +74,9 @@ def wrap_functions_yaml(triggers) -> any:
       trigger_data.update(endpoint)
 
     result = ManifestStack(endpoints=trigger_data)
-    response = yaml.dump(clean_nones(result.__dict__),
-                         default_flow_style=False,
-                         default_style=None)
+    response = dump(clean_nones(result.__dict__),
+                    default_flow_style=False,
+                    default_style=None)
     return Response(response, mimetype='text/yaml')
 
   return wrapper
@@ -96,18 +96,22 @@ def is_http_trigger(trigger: ManifestEndpoint) -> bool:
 
 
 def is_pubsub_trigger(trigger: ManifestEndpoint) -> bool:
-  return trigger.eventTrigger[
+  return trigger.eventTrigger is not None and trigger.eventTrigger[
       'eventType'] == 'google.cloud.pubsub.topic.v1.messagePublished'
 
 
 def serve_triggers(triggers: list[Callable]) -> Flask:
-  """Start serving all triggers provided by the user locally.
-  Used by the generated `app` file upon deployment."""
+  """
+  Start serving all triggers provided by the user locally.
+  Used by the generated `app` file upon deployment.
+  """
   app = Flask(__name__)
 
-  for name, trig in triggers.items():
+  for trig in triggers:
 
     trigger = getattr(trig, '__endpoint__')
+    metadata = getattr(trig, 'firebase_metadata')
+    name = metadata['id']
 
     if is_http_trigger(trigger):
       app.add_url_rule(
