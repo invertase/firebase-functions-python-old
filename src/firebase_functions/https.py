@@ -1,11 +1,8 @@
-from asyncio import FastChildWatcher
-import asyncio
-from asyncio.log import logger
 from enum import Enum
 import functools
 import json
 import re
-from flask import Response as FlaskResponse, Request as FlaskRequest, jsonify
+import flask
 from typing import (Any, Generic, List, TypeVar, Union, Optional)
 from dataclasses import dataclass
 from collections.abc import Callable
@@ -20,8 +17,8 @@ from firebase_functions.params import (SecretParam, StringParam, IntParam,
 from firebase_functions.options import (HttpsOptions, Memory, VpcOptions,
                                         IngressSettings, Sentinel)
 
-Request = FlaskRequest
-Response = FlaskResponse
+FlaskRequest = flask.Request
+FlaskResponse = flask.Response
 
 T = TypeVar('T')
 
@@ -109,7 +106,7 @@ class AuthData:
 class CallableRequest(Generic[T]):
   '''The request sent to a callable function.'''
 
-  raw_request: Request
+  raw_request: FlaskRequest
   '''The raw request handled by the callable.'''
 
   data: Optional[T] = None
@@ -271,20 +268,11 @@ def check_app_token(req: FlaskRequest, ctx: CallableRequest) -> TokenStatus:
   app_check = req.headers.get('X-Firebase-AppCheck')
   if app_check is None:
     return TokenStatus.MISSING
-  try:
-    if 1 != app_check:
-      # TODO validate the Admin SDK can validate app check token
-      raise NotImplementedError(
-          'AppCheck module is not yet supported in the Admin SDK.')
-    # TODO validate the token using the Admin SDK
-    # https://github.com/firebase/firebase-functions/blob/a00ad925ce5a24124d5354d1ff533bb7bd0f8c76/src/common/providers/https.ts#L675-L688
-    app_check_token = None
-    ctx.app = AppCheckData(app_id=app_check_token.token,
-                           token=app_check_token.app_id)
-    return TokenStatus.VALID
-  except auth.InvalidIdTokenError as e:
-    error(f'Error validating token: {e}')
-    return TokenStatus.INVALID
+  #
+  # TODO validate the token using the Admin SDK once app check is supported.
+  # For now, just assume it's valid.
+  ctx.app = None
+  return TokenStatus.VALID
 
 
 def check_tokens(
@@ -305,10 +293,10 @@ def check_tokens(
 
   errs = []
   if verifications.app == TokenStatus.INVALID:
-    errs.append('AppCheck token was rejected.', log_payload)
+    errs.append(('AppCheck token was rejected.', log_payload))
 
   if verifications.auth == TokenStatus.INVALID:
-    errs.append('Auth token was rejected.', log_payload)
+    errs.append(('Auth token was rejected.', log_payload))
 
   if len(errs) == 0:
     info('Callable request verification passed', log_payload)
@@ -325,13 +313,11 @@ def check_tokens(
 def valid_request(request: FlaskRequest) -> bool:
   # The body must not be empty.
   if request.json is None:
-    logger.debug('Request is missing body.')
     warn('Request is missing body.')
     return False
 
   # Make sure it's a POST.
   if request.method != 'POST':
-    logger.debug('Request has invalid method.')
     warn('Request has invalid method.', request.method)
     return False
 
@@ -350,13 +336,11 @@ def valid_request(request: FlaskRequest) -> bool:
 
   if content_type != 'application/json':
 
-    logger.debug('Request has incorrect Content-Type.')
     warn('Request has incorrect Content-Type.', content_type)
     return False
 
   # The body must have data.
   if request.json == 'undefined':
-    logger.debug('Request body is missing data.')
     warn('Request body is missing data.', request.json)
     return False
 
@@ -372,7 +356,6 @@ def valid_request(request: FlaskRequest) -> bool:
         'Request body has extra fields: ',
         ''.join(f'{key}: {value},' for (key, value) in extra_keys.items()),
     )
-    return FastChildWatcher
 
   return True
 
@@ -391,16 +374,16 @@ def wrap_on_call_handler(
 ) -> CallableRequest[T]:
   if not valid_request(request):
     # TODO use the Cloud Logger to log an error entry.
-    raise HttpsError(FunctionsErrorCode.invalid_argument, 'Bad Request')
+    raise HttpsError(FunctionsErrorCode.INVALID_ARGUMENT, 'Bad Request')
 
   context = CallableRequest(raw_request=request)
   token_status = check_tokens(request, context)
 
   if token_status.auth == TokenStatus.INVALID:
-    raise HttpsError(FunctionsErrorCode.unauthenticated, 'Unauthenticated')
+    raise HttpsError(FunctionsErrorCode.UNAUTHENTICATED, 'Unauthenticated')
 
   if token_status.app == TokenStatus.INVALID and not options.allow_invalid_app_check_token:
-    raise HttpsError(FunctionsErrorCode.unauthenticated, 'Unauthenticated')
+    raise HttpsError(FunctionsErrorCode.UNAUTHENTICATED, 'Unauthenticated')
 
   instance_id = request.headers.get('Firebase-Instance-ID-Token')
   if instance_id is not None:
@@ -412,7 +395,7 @@ def wrap_on_call_handler(
         'Firebase-Instance-ID-Token')
 
   data = json.loads(request.data)
-  result: Response
+  result: FlaskResponse
 
   arg: CallableRequest = CallableRequest(
       raw_request=context.raw_request,
@@ -425,17 +408,17 @@ def wrap_on_call_handler(
   try:
     result = func(arg)
 
-    response_body = jsonify(data=result, status=200)
+    response_body = flask.jsonify(data=result, status=200)
 
     response = response_body
   except Exception as err:
     if not isinstance(err, HttpsError):
       error('Unhandled error', err)
-      err = HttpsError(FunctionsErrorCode.internal, 'INTERNAL')
+      err = HttpsError(FunctionsErrorCode.INTERNAL, 'INTERNAL')
 
     status = err.http_error_code.status
 
-    response_body = jsonify(error=err.to_dict(), status=status)
+    response_body = flask.jsonify(error=err.to_dict(), status=status)
 
     response = response_body
 
@@ -520,7 +503,7 @@ def on_call(
       return wrap_on_call_handler(
           func,
           request,
-          response if response is not None else Response(),
+          response if response is not None else FlaskResponse(),
           callable_options,
       )
 

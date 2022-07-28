@@ -1,7 +1,7 @@
 from setuptools import find_packages, setup
 
 install_requires = [
-    'flask>=2.1.2', 'functions-framework>=3.0.0', 'firebase-admin >=5.2.0',
+    'flask>=2.1.2', 'functions-framework>=3.0.0', 'firebase-admin>=5.2.0',
     'pyyaml>=6.0'
 ]
 

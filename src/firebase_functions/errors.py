@@ -26,26 +26,25 @@ class CanonicalErrorCodeName(str, Enum):
   DATA_LOSS = 'DATA_LOSS'
 
 
-@dataclass(frozen=True)
-class FunctionsErrorCode():
+class FunctionsErrorCode(str, Enum):
   """The error code for a given error."""
-  ok: str = 'ok'
-  cancelled: str = 'cancelled'
-  unknown: str = 'unknown'
-  invalid_argument: str = 'invalid-argument'
-  deadline_exceeded: str = 'deadline-exceeded'
-  not_found: str = 'not-found'
-  already_exists: str = 'already-exists'
-  permission_denied: str = 'permission-denied'
-  unauthenticated: str = 'unauthenticated'
-  resource_exhausted: str = 'resource-exhausted'
-  failed_precondition: str = 'failed-precondition'
-  aborted: str = 'aborted'
-  out_of_range: str = 'out-of-range'
-  unimplemented: str = 'unimplemented'
-  internal: str = 'internal'
-  unavailable: str = 'unavailable'
-  data_loss: str = 'data-loss'
+  OK: str = 'ok'
+  CANCELLED: str = 'cancelled'
+  UNKNOWN: str = 'unknown'
+  INVALID_ARGUMENT: str = 'invalid-argument'
+  DEADLINE_EXCEEDED: str = 'deadline-exceeded'
+  NOT_FOUND: str = 'not-found'
+  ALREADY_EXISTS: str = 'already-exists'
+  PERMISSION_DENIED: str = 'permission-denied'
+  UNAUTHENTICATED: str = 'unauthenticated'
+  REASOURCE_EXHAUSTED: str = 'resource-exhausted'
+  FAILED_PRECONDITION: str = 'failed-precondition'
+  ABORTED: str = 'aborted'
+  OUT_OF_RANGE: str = 'out-of-range'
+  UNIMPLEMENTED: str = 'unimplemented'
+  INTERNAL: str = 'internal'
+  UNAVAILABLE: str = 'unavailable'
+  DATA_LOSS: str = 'data-loss'
 
 
 class HttpErrorCode():
