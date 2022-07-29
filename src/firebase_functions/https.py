@@ -129,8 +129,8 @@ def on_request(
     region: Optional[StringParam] = None,
     memory: Union[IntParam, Memory, Sentinel, None] = None,
     timeout_sec: Optional[IntParam] = None,
-    min_instances: Union[None, IntParam, IntParam, Sentinel] = None,
-    max_instances: Union[None, IntParam, IntParam, Sentinel] = None,
+    min_instances: Union[None, IntParam, int, Sentinel] = None,
+    max_instances: Union[None, IntParam, int, Sentinel] = None,
     vpc: Union[None, VpcOptions, Sentinel] = None,
     ingress: Union[None, IngressSettings, Sentinel] = None,
     service_account: Union[None, StringParam, StringParam, Sentinel] = None,
@@ -196,7 +196,7 @@ def on_request(
       region=region,
       platform='gcfv2',
       labels={},
-      httpsTrigger={},
+      httpsTrigger=HttpsTrigger(),
       vpc=vpc,
       availableMemoryMb=memory,
       maxInstances=max_instances,
@@ -348,7 +348,8 @@ def valid_request(request: FlaskRequest) -> bool:
     return False
 
   # The body must have data.
-  if request.json == 'undefined':
+  if request.json['data'] == None:
+    # TODO should we check if data exists or not?
     warn('Request body is missing data.', request.json)
     return False
 
@@ -364,6 +365,7 @@ def valid_request(request: FlaskRequest) -> bool:
         'Request body has extra fields: ',
         ''.join(f'{key}: {value},' for (key, value) in extra_keys.items()),
     )
+    return False
 
   return True
 
@@ -438,16 +440,16 @@ def wrap_on_call_handler(
 def on_call(
     func: Callable[[CallableRequest], Any],
     *,
-    allowed_origins: StringParam = None,
-    allowed_methods: StringParam = None,
-    region: Optional[StringParam] = None,
-    memory: Union[None, IntParam, Sentinel] = None,
-    timeout_sec: Union[None, IntParam, Sentinel] = None,
-    min_instances: Union[None, IntParam, Sentinel] = None,
-    max_instances: Union[None, IntParam, Sentinel] = None,
+    allowed_origins: Union[StringParam, str] = None,
+    allowed_methods: Union[StringParam, str] = None,
+    region: Union[StringParam, str] = None,
+    memory: Union[None, IntParam, int, Sentinel] = None,
+    timeout_sec: Union[None, IntParam, int, Sentinel] = None,
+    min_instances: Union[None, IntParam, int, Sentinel] = None,
+    max_instances: Union[None, IntParam, int, Sentinel] = None,
     vpc: Union[None, VpcOptions, Sentinel] = None,
     ingress: Union[None, IngressSettings, Sentinel] = None,
-    service_account: Union[None, StringParam, Sentinel] = None,
+    service_account: Union[None, StringParam, str, Sentinel] = None,
     secrets: Union[List[StringParam], SecretParam, Sentinel, None],
 ) -> Callable[[CallableRequest], Any]:
   '''Decorator for a function that can be called like an RPC service.
@@ -531,9 +533,12 @@ def on_call(
         minInstances=min_instances,
     )
 
-    call_view_func.firebase_metadata = metadata
-    call_view_func.trigger = trigger
-    call_view_func.__endpoint__ = manifest
+    functools.partial(
+        call_view_func,
+        firebase_metadata=metadata,
+        trigger=trigger,
+        __endpoint__=manifest,
+    )
 
     return call_view_func
 

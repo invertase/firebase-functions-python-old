@@ -4,9 +4,10 @@
 
 from dataclasses import dataclass
 from typing import TypedDict, Optional, Union
+from typing_extensions import NotRequired
 
-from firebase_functions.options import VpcOptions
-from firebase_functions.params import StringParam
+from firebase_functions.options import Memory, Sentinel, VpcOptions
+from firebase_functions.params import IntParam, StringParam
 
 
 class Secret(TypedDict):
@@ -14,18 +15,20 @@ class Secret(TypedDict):
   secret: Union[str, None]
 
 
-class HttpsTrigger(TypedDict):
-  invoker: Optional[list[str]]
+@dataclass(frozen=True)
+class HttpsTrigger():
+  invoker: Optional[list[str]] = None
 
 
-class EventTrigger(TypedDict):
-  eventFilters: dict
-  eventFilterPathPatterns: dict
-  channel: str
-  eventType: str
-  retry: bool
-  region: str
-  serviceAccountEmail: str
+@dataclass(frozen=True)
+class EventTrigger():
+  eventFilters: Optional[dict] = None
+  eventFilterPathPatterns: Optional[dict] = None
+  channel: Optional[str] = None
+  eventType: Optional[str] = None
+  retry: Optional[bool] = None
+  region: Optional[str] = None
+  serviceAccountEmail: Optional[str] = None
 
 
 class RetryConfig(TypedDict):
@@ -54,14 +57,14 @@ class ManifestEndpoint():
   entryPoint: str
   region: Optional[Union[StringParam, str]] = None
   platform: Optional[str] = None
-  availableMemoryMb: Optional[int] = None
-  maxInstances: Optional[int] = None
-  minInstances: Optional[int] = None
+  availableMemoryMb: Union[IntParam, Memory, Sentinel, None] = None
+  maxInstances: Union[None, IntParam, int, Sentinel] = None
+  minInstances: Union[None, IntParam, int, Sentinel] = None
   concurrency: Optional[int] = None
   serviceAccountEmail: Optional[str] = None
   timeoutSeconds: Optional[int] = None
   cpu: Union[int, str] = 'gcf_gen1'
-  vpc: Optional[VpcOptions] = None
+  vpc: Union[None, VpcOptions, Sentinel] = None
   labels: Optional[dict[str, str]] = None
   ingressSettings: Optional[str] = None
   environmentVariables: Optional[dict] = None
