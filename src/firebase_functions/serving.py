@@ -82,10 +82,15 @@ def wrap_functions_yaml(triggers) -> Any:
   return wrapper
 
 
+def to_camel_case(snake_str):
+  components = snake_str.split('_')
+  return components[0] + ''.join(x.title() for x in components[1:])
+
+
 def add_entrypoint(name, trigger) -> dict:
   """Add an entrypoint for a single function in the user's codebase."""
   endpoint = {}
-  endpoint[name] = trigger
+  endpoint[to_camel_case(name)] = trigger
   return endpoint
 
 
@@ -96,8 +101,7 @@ def is_http_trigger(trigger: ManifestEndpoint) -> bool:
 
 
 def is_pubsub_trigger(trigger: ManifestEndpoint) -> bool:
-  return trigger.eventTrigger is not None and trigger.eventTrigger[
-      'eventType'] == 'google.cloud.pubsub.topic.v1.messagePublished'
+  return trigger.eventTrigger is not None and trigger.eventTrigger.eventType == 'google.cloud.pubsub.topic.v1.messagePublished'
 
 
 def serve_triggers(triggers: list[Callable]) -> Flask:

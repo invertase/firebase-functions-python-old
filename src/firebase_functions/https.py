@@ -122,8 +122,6 @@ class CallableRequest(Generic[T]):
 
 
 def on_request(
-    func: Callable[[FlaskRequest], FlaskResponse],
-    *,
     allowed_origins: Optional[StringParam] = None,
     allowed_methods: Optional[StringParam] = None,
     region: Optional[StringParam] = None,
@@ -186,31 +184,33 @@ def on_request(
       }
   }
 
-  @functools.wraps(func)
-  def request_view_func(request: FlaskRequest) -> FlaskResponse:
+  def wrapper(func):
 
-    return func(request)
+    @functools.wraps(func)
+    def request_view_func(request: FlaskRequest) -> FlaskResponse:
 
-  manifest = ManifestEndpoint(
-      entryPoint=func.__name__,
-      region=region,
-      platform='gcfv2',
-      labels={},
-      httpsTrigger=HttpsTrigger(),
-      vpc=vpc,
-      availableMemoryMb=memory,
-      maxInstances=max_instances,
-      minInstances=min_instances,
-  )
+      return func(request)
 
-  functools.partial(
-      request_view_func,
-      firebase_metadata=metadata,
-      trigger=trigger,
-      __endpoint__=manifest,
-  )
+    metadata['id'] = func.__name__
+    manifest = ManifestEndpoint(
+        entryPoint=func.__name__,
+        region=region,
+        platform='gcfv2',
+        labels={},
+        httpsTrigger=HttpsTrigger(),
+        vpc=vpc,
+        availableMemoryMb=memory,
+        maxInstances=max_instances,
+        minInstances=min_instances,
+    )
 
-  return request_view_func
+    request_view_func.firebase_metadata = metadata,
+    request_view_func.trigger = trigger,
+    request_view_func.__endpoint__ = manifest,
+
+    return request_view_func
+
+  return wrapper
 
 
 class TokenStatus(Enum):
@@ -438,8 +438,6 @@ def wrap_on_call_handler(
 
 
 def on_call(
-    func: Callable[[CallableRequest], Any],
-    *,
     allowed_origins: Union[StringParam, str] = None,
     allowed_methods: Union[StringParam, str] = None,
     region: Union[StringParam, str] = None,
@@ -450,7 +448,7 @@ def on_call(
     vpc: Union[None, VpcOptions, Sentinel] = None,
     ingress: Union[None, IngressSettings, Sentinel] = None,
     service_account: Union[None, StringParam, str, Sentinel] = None,
-    secrets: Union[List[StringParam], SecretParam, Sentinel, None],
+    secrets: Union[List[StringParam], SecretParam, Sentinel, None] = None,
 ) -> Callable[[CallableRequest], Any]:
   '''Decorator for a function that can be called like an RPC service.
 
@@ -506,8 +504,6 @@ def on_call(
   metadata['apiVersion'] = 1
   metadata['trigger'] = {}
 
-  metadata['id'] = func.__name__
-
   def wrapper(func):
 
     @functools.wraps(func)
@@ -521,6 +517,7 @@ def on_call(
 
       return func
 
+    metadata['id'] = func.__name__
     manifest = ManifestEndpoint(
         entryPoint=metadata['id'],
         region=region,
@@ -533,12 +530,9 @@ def on_call(
         minInstances=min_instances,
     )
 
-    functools.partial(
-        call_view_func,
-        firebase_metadata=metadata,
-        trigger=trigger,
-        __endpoint__=manifest,
-    )
+    call_view_func.firebase_metadata = metadata,
+    call_view_func.trigger = trigger,
+    call_view_func.__endpoint__ = manifest,
 
     return call_view_func
 

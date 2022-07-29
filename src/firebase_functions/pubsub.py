@@ -37,7 +37,6 @@ CloudEventMessage = CloudEvent[Message[T]]
 
 
 def on_message_published(
-    func: Callable[[CloudEvent[Message[T]]], None],
     *,
     topic: str,
     region: Union[None, StringParam, str] = None,
@@ -48,7 +47,7 @@ def on_message_published(
     vpc: Union[None, VpcOptions, Sentinel] = None,
     ingress: Union[None, IngressSettings, Sentinel] = None,
     service_account: Union[None, StringParam, str, Sentinel] = None,
-    secrets: Union[None, List[StringParam], SecretParam, Sentinel],
+    secrets: Union[None, List[StringParam], SecretParam, Sentinel] = None,
 ) -> Callable[[CloudEvent[Message[T]]], None]:
   """
       Decorator for functions that are triggered by Pub/Sub."""
@@ -72,7 +71,7 @@ def on_message_published(
   def wrapper(func):
 
     @functools.wraps(func)
-    def call_view_func(*args, **kwargs):
+    def pubsub_view_func(*args, **kwargs):
       return func(*args, **kwargs)
 
     metadata['id'] = func.__name__
@@ -95,11 +94,9 @@ def on_message_published(
         ),
     )
 
-    functools.partial(
-        call_view_func,
-        firebase_metadata=metadata,
-        __endpoint__=manifest,
-    )
-    return call_view_func
+    pubsub_view_func.firebase_metadata = metadata
+    pubsub_view_func.__endpoint__ = manifest
+
+    return pubsub_view_func
 
   return wrapper
