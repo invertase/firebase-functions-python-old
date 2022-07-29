@@ -4,7 +4,6 @@
 
 from dataclasses import dataclass
 from typing import TypedDict, Optional, Union
-from typing_extensions import NotRequired
 
 from firebase_functions.options import Memory, Sentinel, VpcOptions
 from firebase_functions.params import IntParam, StringParam
