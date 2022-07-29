@@ -80,9 +80,6 @@ class ManifestEndpoint():
   scheduleTrigger: Optional[ScheduleTrigger] = None
   blockingTrigger: Optional[BlockingTrigger] = None
 
-  def __post_init__(self):
-    self.entryPoint = remove_undrscores(self.entryPoint)
-
 
 @dataclass(frozen=True)
 class ManifestRequiredAPI():

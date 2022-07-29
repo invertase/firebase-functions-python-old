@@ -132,6 +132,8 @@ class CallableRequest(Generic[T]):
 
 
 def on_request(
+    func: Callable[[FlaskRequest, FlaskResponse], None] = None,
+    *,
     allowed_origins: Optional[StringParam] = None,
     allowed_methods: Optional[StringParam] = None,
     region: Optional[StringParam] = None,
@@ -221,7 +223,10 @@ def on_request(
 
     return request_view_func
 
-  return wrapper
+  if func is None:
+    return wrapper
+
+  return wrapper(func)
 
 
 class TokenStatus(Enum):
@@ -392,47 +397,45 @@ def wrap_on_call_handler(
     response: FlaskResponse,
     options: HttpsOptions,
 ) -> FlaskResponse:
-  if not valid_request(request):
-    # TODO use the Cloud Logger to log an error entry.
-    raise HttpsError(FunctionsErrorCode.INVALID_ARGUMENT, 'Bad Request')
+  try:
+    if not valid_request(request):
+      # TODO use the Cloud Logger to log an error entry.
+      raise HttpsError(FunctionsErrorCode.INVALID_ARGUMENT, 'Bad Request')
 
-  context: CallableRequest = CallableRequest(raw_request=request)
-  token_status = check_tokens(request, context)
+    context: CallableRequest = CallableRequest(raw_request=request)
+    token_status = check_tokens(request, context)
 
-  if token_status.auth == TokenStatus.INVALID:
-    raise HttpsError(FunctionsErrorCode.UNAUTHENTICATED, 'Unauthenticated')
+    if token_status.auth == TokenStatus.INVALID:
+      raise HttpsError(FunctionsErrorCode.UNAUTHENTICATED, 'Unauthenticated')
 
-  if token_status.app == TokenStatus.INVALID and not options.allow_invalid_app_check_token:
-    raise HttpsError(FunctionsErrorCode.UNAUTHENTICATED, 'Unauthenticated')
+    if token_status.app == TokenStatus.INVALID and not options.allow_invalid_app_check_token:
+      raise HttpsError(FunctionsErrorCode.UNAUTHENTICATED, 'Unauthenticated')
 
-  instance_id = request.headers.get('Firebase-Instance-ID-Token')
-  if instance_id is not None:
-    # Validating the token requires an http request, so we don't do it.
-    # If the user wants to use it for something, it will be validated then.
-    # Currently, the only real use case for this token is for sending
-    # pushes with FCM. In that case, the FCM APIs will validate the token.
-    context = dataclasses.replace(
-        context,
-        instance_id_token=request.headers.get('Firebase-Instance-ID-Token'),
+    instance_id = request.headers.get('Firebase-Instance-ID-Token')
+    if instance_id is not None:
+      # Validating the token requires an http request, so we don't do it.
+      # If the user wants to use it for something, it will be validated then.
+      # Currently, the only real use case for this token is for sending
+      # pushes with FCM. In that case, the FCM APIs will validate the token.
+      context = dataclasses.replace(
+          context,
+          instance_id_token=request.headers.get('Firebase-Instance-ID-Token'),
+      )
+
+    data = json.loads(request.data)
+
+    arg: CallableRequest = CallableRequest(
+        raw_request=context.raw_request,
+        data=data,
+        auth=context.auth,
+        app=context.app,
+        instance_id_token=context.instance_id_token,
     )
 
-  data = json.loads(request.data)
-  result: FlaskResponse
 
-  arg: CallableRequest = CallableRequest(
-      raw_request=context.raw_request,
-      data=data,
-      auth=context.auth,
-      app=context.app,
-      instance_id_token=context.instance_id_token,
-  )
-
-  try:
     result = func(arg)
 
-    response_body = flask.jsonify(data=result, status=200)
-
-    response = response_body
+    response = flask.jsonify(data=result, status=200)
   except Exception as err:
     if not isinstance(err, HttpsError):
       error('Unhandled error', err)
@@ -440,14 +443,14 @@ def wrap_on_call_handler(
 
     status = err.http_error_code.status
 
-    response_body = flask.jsonify(error=err.to_dict(), status=status)
-
-    response = response_body
+    response = flask.jsonify(error=err.to_dict(), status=status)
 
   return response
 
 
 def on_call(
+    func: Callable[[CallableRequest], Any] = None,
+    *,
     allowed_origins: Union[StringParam, str] = None,
     allowed_methods: Union[StringParam, str] = None,
     region: Union[StringParam, str] = None,
@@ -518,14 +521,12 @@ def on_call(
 
     @functools.wraps(func)
     def call_view_func(request: FlaskRequest):
-      wrap_on_call_handler(
-          func,
-          request,
-          FlaskResponse(),
-          callable_options,
+      return wrap_on_call_handler(
+          func=func,
+          request=request,
+          response=FlaskResponse(),
+          options=callable_options,
       )
-
-      return func
 
     metadata['id'] = func.__name__
     manifest = ManifestEndpoint(
@@ -546,4 +547,7 @@ def on_call(
 
     return call_view_func
 
-  return wrapper
+  if func is None:
+    return wrapper
+
+  return wrapper(func)

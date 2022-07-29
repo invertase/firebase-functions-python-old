@@ -28,7 +28,7 @@ def http_request_function(req: FlaskRequest, res: FlaskResponse):
 
 # Sample of a HTTPS callable CF.
 @on_call(memory=Memory.MB_256, region='us-central-1')
-def http_callable_function(req: CallableRequest):
+def httpcallablefunction(req: CallableRequest):
 
   debug('Debugging on_call')
   debug(f'Data: {req.data}')

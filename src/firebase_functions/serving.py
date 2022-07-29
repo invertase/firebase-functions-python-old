@@ -93,14 +93,15 @@ def add_entrypoint(name, trigger) -> dict:
 def is_http_trigger(endpoint: ManifestEndpoint) -> bool:
   # If the function's trigger contains `httpsTrigger` attribute,
   # then it's a https function.
-  return endpoint.httpsTrigger is not None or isinstance(endpoint, HttpsTrigger)
+  return endpoint.httpsTrigger is not None or isinstance(
+      endpoint.httpsTrigger, HttpsTrigger)
 
 
 def is_callable_trigger(endpoint: ManifestEndpoint) -> bool:
   # If the function's trigger contains `httpsTrigger` attribute,
   # then it's a https function.
   return endpoint.callableTrigger is not None or isinstance(
-      endpoint, CallableTrigger)
+      endpoint.callableTrigger, CallableTrigger)
 
 
 def is_pubsub_trigger(endpoint: ManifestEndpoint) -> bool:
@@ -116,12 +117,7 @@ def serve_triggers(triggers: dict[str, Callable]) -> Flask:
 
   for name, trigger in triggers.items():
 
-    print(name)
-    print(trigger)
-
     endpoint = getattr(trigger, '__firebase_endpoint__')
-
-    print(endpoint)
 
     if is_http_trigger(endpoint) or is_callable_trigger(endpoint):
       app.add_url_rule(
@@ -131,10 +127,12 @@ def serve_triggers(triggers: dict[str, Callable]) -> Flask:
           methods=__ALLOWED_METHODS,
       )
     elif is_pubsub_trigger(endpoint):
-      app.add_url_rule(f'/{name}',
-                       endpoint=name,
-                       view_func=wrap_pubsub_trigger(trigger),
-                       methods=['POST'])
+      app.add_url_rule(
+          f'/{name}',
+          endpoint=name,
+          view_func=wrap_pubsub_trigger(trigger),
+          methods=['POST'],
+      )
     else:
       raise ValueError('Unknown trigger type!')
 
