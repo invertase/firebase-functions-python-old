@@ -7,6 +7,7 @@ from typing import TypedDict, Optional, Union
 
 from firebase_functions.options import Memory, Sentinel, VpcOptions
 from firebase_functions.params import IntParam, StringParam
+from firebase_functions.utils import to_camel_case
 
 
 class Secret(TypedDict):
@@ -49,7 +50,7 @@ class BlockingTrigger(TypedDict):
   options: dict
 
 
-@dataclass(frozen=True)
+@dataclass()
 class ManifestEndpoint():
   """An definition of a function as appears in the Manifest."""
 
@@ -73,6 +74,9 @@ class ManifestEndpoint():
   eventTrigger: Optional[EventTrigger] = None
   scheduleTrigger: Optional[ScheduleTrigger] = None
   blockingTrigger: Optional[BlockingTrigger] = None
+
+  def __post_init__(self):
+    self.entryPoint = to_camel_case(self.entryPoint)
 
 
 @dataclass(frozen=True)
