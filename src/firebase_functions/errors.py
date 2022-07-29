@@ -52,31 +52,31 @@ class HttpErrorCode():
 
   def __init__(
       self,
-      canonical_name: FunctionsErrorCode,
-      status: str,
+      canonical_name: CanonicalErrorCodeName,
+      status: int,
   ):
     self.canonical_name = canonical_name
     self.status = status
 
 
 error_code_map = {
-    FunctionsErrorCode.ok:
+    FunctionsErrorCode.OK:
         HttpErrorCode(CanonicalErrorCodeName.OK, 200),
-    FunctionsErrorCode.cancelled:
+    FunctionsErrorCode.CANCELLED:
         HttpErrorCode(CanonicalErrorCodeName.CANCELLED, 499),
-    FunctionsErrorCode.unknown:
+    FunctionsErrorCode.UNKNOWN:
         HttpErrorCode(CanonicalErrorCodeName.UNKNOWN, 500),
-    FunctionsErrorCode.invalid_argument:
+    FunctionsErrorCode.INVALID_ARGUMENT:
         HttpErrorCode(CanonicalErrorCodeName.INVALID_ARGUMENT, 400),
-    FunctionsErrorCode.deadline_exceeded:
+    FunctionsErrorCode.DEADLINE_EXCEEDED:
         HttpErrorCode(CanonicalErrorCodeName.DEADLINE_EXCEEDED, 504),
-    FunctionsErrorCode.not_found:
+    FunctionsErrorCode.NOT_FOUND:
         HttpErrorCode(CanonicalErrorCodeName.NOT_FOUND, 404),
-    FunctionsErrorCode.already_exists:
+    FunctionsErrorCode.ALREADY_EXISTS:
         HttpErrorCode(CanonicalErrorCodeName.ALREADY_EXISTS, 409),
-    FunctionsErrorCode.permission_denied:
+    FunctionsErrorCode.PERMISSION_DENIED:
         HttpErrorCode(CanonicalErrorCodeName.PERMISSION_DENIED, 403),
-    FunctionsErrorCode.unauthenticated:
+    FunctionsErrorCode.UNAUTHENTICATED:
         HttpErrorCode(CanonicalErrorCodeName.UNAUTHENTICATED, 401),
 }
 

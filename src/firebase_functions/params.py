@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Iterable, Sequence, Union, TypeVar, Generic, Optional
 
-T = TypeVar("T", int, float, str, Sequence[str])
+T = TypeVar("T", int, float, str, bool, Sequence[str])
 
 
 class Input(Generic[T]):
@@ -123,8 +123,16 @@ class _IfThenExpression(Expression[E]):
 class BoolExpression(Expression[bool]):
   """ A boolean expression supports boolean operators """
 
+  def expression(self) -> str:
+    return 'bool'
+
+  def value(self) -> bool:
+    pass
+
   def then(self, then_val: E, else_val: E) -> Expression[E]:
-    _IfThenExpression(condition=self, then_val=then_val, else_val=else_val)
+    return _IfThenExpression(condition=self,
+                             then_val=then_val,
+                             else_val=else_val)
 
 
 @dataclass(frozen=True)
@@ -132,7 +140,7 @@ class _EqualityExpression(BoolExpression):
   left: Expression[E]
   right: E
 
-  def value(self) -> E:
+  def value(self) -> bool:
     return self.left.value() == self.right
 
   def expression(self) -> str:
@@ -143,12 +151,22 @@ class _EqualityExpression(BoolExpression):
 class ComparableExpression(Expression[E]):
   """ An expression which supports the equals method """
 
-  def __eq__(self, val: E) -> BoolExpression:
-    """ A possibly too magical operator """
-    self.equals(val)
+  def __eq__(self, __o: object) -> bool:
+    return super().__eq__(__o)
+
+  def __str__(self) -> str:
+    """ Returns the full expression in a {{ }} escape sequence """
+    return f"{{ {self.expression} }}"
+
+  def expression(self) -> str:
+    """ Returns the CEL for this expression """
+    pass
+
+  def value(self) -> E:
+    pass
 
   def equals(self, val: E) -> BoolExpression:
-    _EqualityExpression(left=self, right=val)
+    return _EqualityExpression(left=self, right=val)
 
 
 @dataclass(frozen=True)
@@ -175,45 +193,64 @@ class _Param(Expression[E]):
   def expression(self) -> str:
     return f"params.{self.name}"
 
+  @abc.abstractmethod
   def value(self) -> E:
-    if os.environ.get(self.name) is not None:
-      return os.environ[self.name]
-    elif isinstance(self.default, Expression[E]):
-      return self.default.value()
-    elif self.default is not None:
-      return self.default
-    else:
-      return E()
+    pass
 
 
 @dataclass(frozen=True)
 class StringParam(_Param[str], ComparableExpression[str]):
   """ A string parameter """
-  pass
+
+  def value(self) -> str:
+    if os.environ.get(self.name) is not None:
+      return os.environ[self.name]
+    elif isinstance(self.default, Expression):
+      return self.default.value()
+    elif self.default is not None:
+      return self.default
+    else:
+      return ''
 
 
 @dataclass(frozen=True)
 class IntParam(_Param[int], ComparableExpression[int]):
   """ An int parameter """
-  pass
+
+  def value(self) -> int:
+    if os.environ.get(self.name) is not None:
+      return int(os.environ[self.name])
+    elif isinstance(self.default, Expression):
+      return self.default.value()
+    elif self.default is not None:
+      return self.default
+    else:
+      return 0
 
 
 @dataclass(frozen=True)
 class FloatParam(_Param[float], ComparableExpression[float]):
   """ A float parameter """
-  pass
+
+  def value(self) -> float:
+    if os.environ.get(self.name) is not None:
+      return float(os.environ[self.name])
+    elif isinstance(self.default, Expression[float]):
+      return self.default.value()
+    elif self.default is not None:
+      return self.default
+    else:
+      return 0.0
 
 
 @dataclass(frozen=True)
 class ListParam(_Param[Iterable[str]]):
   """ A list of strings parameter.  """
 
-  def value(self) -> E:
+  def value(self) -> Iterable[str]:
     if os.environ.get(self.name) is not None:
       return os.environ[self.name].split("\n")
       # TODO. Should delim be a parameter here?
-    elif isinstance(self.default, Expression[Iterable[str]]):
-      return self.default.value()
     elif self.default is not None:
       return self.default
     else:

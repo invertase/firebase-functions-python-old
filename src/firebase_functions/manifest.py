@@ -4,8 +4,10 @@
 
 from dataclasses import dataclass
 from typing import TypedDict, Optional, Union
+from typing_extensions import NotRequired
 
-from firebase_functions.options import VpcOptions
+from firebase_functions.options import Memory, Sentinel, VpcOptions
+from firebase_functions.params import IntParam, StringParam
 
 
 class Secret(TypedDict):
@@ -13,18 +15,20 @@ class Secret(TypedDict):
   secret: Union[str, None]
 
 
-class HttpsTrigger(TypedDict):
-  invoker: list[str]
+@dataclass(frozen=True)
+class HttpsTrigger():
+  invoker: Optional[list[str]] = None
 
 
-class EventTrigger(TypedDict):
-  eventFilters: dict
-  eventFilterPathPatterns: dict
-  channel: str
-  eventType: str
-  retry: bool
-  region: str
-  serviceAccountEmail: str
+@dataclass(frozen=True)
+class EventTrigger():
+  eventFilters: Optional[dict] = None
+  eventFilterPathPatterns: Optional[dict] = None
+  channel: Optional[str] = None
+  eventType: Optional[str] = None
+  retry: Optional[bool] = None
+  region: Optional[str] = None
+  serviceAccountEmail: Optional[str] = None
 
 
 class RetryConfig(TypedDict):
@@ -51,25 +55,25 @@ class ManifestEndpoint():
   """An definition of a function as appears in the Manifest."""
 
   entryPoint: str
-  region: list[str]
-  platform: str = None
-  availableMemoryMb: int = None
-  maxInstances: int = None
-  minInstances: int = None
-  concurrency: int = None
-  serviceAccountEmail: str = None
-  timeoutSeconds: int = None
+  region: Optional[Union[StringParam, str]] = None
+  platform: Optional[str] = None
+  availableMemoryMb: Union[IntParam, Memory, Sentinel, None] = None
+  maxInstances: Union[None, IntParam, int, Sentinel] = None
+  minInstances: Union[None, IntParam, int, Sentinel] = None
+  concurrency: Optional[int] = None
+  serviceAccountEmail: Optional[str] = None
+  timeoutSeconds: Optional[int] = None
   cpu: Union[int, str] = 'gcf_gen1'
-  vpc: VpcOptions = None
-  labels: dict[str, str] = None
-  ingressSettings: str = None
-  environmentVariables: dict = None
-  secretEnvironmentVariables: list[Secret] = None
-  httpsTrigger: HttpsTrigger = None
-  callableTrigger: dict = None
-  eventTrigger: EventTrigger = None
-  scheduleTrigger: ScheduleTrigger = None
-  blockingTrigger: BlockingTrigger = None
+  vpc: Union[None, VpcOptions, Sentinel] = None
+  labels: Optional[dict[str, str]] = None
+  ingressSettings: Optional[str] = None
+  environmentVariables: Optional[dict] = None
+  secretEnvironmentVariables: Optional[list[Secret]] = None
+  httpsTrigger: Optional[HttpsTrigger] = None
+  callableTrigger: Optional[dict] = None
+  eventTrigger: Optional[EventTrigger] = None
+  scheduleTrigger: Optional[ScheduleTrigger] = None
+  blockingTrigger: Optional[BlockingTrigger] = None
 
 
 @dataclass(frozen=True)
@@ -81,5 +85,5 @@ class ManifestRequiredAPI():
 @dataclass(frozen=True)
 class ManifestStack():
   specVersion: str = 'v1alpha1'
-  endpoints: dict[str, ManifestEndpoint] = None
+  endpoints: Optional[dict[str, ManifestEndpoint]] = None
   requiredAPIs: Union[Optional[list[ManifestRequiredAPI]], None] = None
