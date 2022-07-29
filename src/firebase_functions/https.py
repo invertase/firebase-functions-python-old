@@ -121,6 +121,16 @@ class CallableRequest(Generic[T]):
   '''An unverified token for a Firebase Instance ID.'''
 
 
+# def wrap_on_request_handler(
+#     func: Callable[[FlaskRequest], FlaskResponse],
+#     request: FlaskRequest,
+#     response: FlaskResponse,
+#     options: HttpsOptions,
+# ) -> FlaskResponse:
+
+#   return response
+
+
 def on_request(
     allowed_origins: Optional[StringParam] = None,
     allowed_methods: Optional[StringParam] = None,
@@ -133,7 +143,7 @@ def on_request(
     ingress: Union[None, IngressSettings, Sentinel] = None,
     service_account: Union[None, StringParam, StringParam, Sentinel] = None,
     secrets: Union[List[StringParam], SecretParam, Sentinel, None] = None,
-) -> Callable[[FlaskRequest], FlaskResponse]:
+) -> Callable[[FlaskRequest], None]:
   """Decorator for a function that handles raw HTTPS requests.
 
   Parameters:
@@ -187,12 +197,13 @@ def on_request(
   def wrapper(func):
 
     @functools.wraps(func)
-    def request_view_func(request: FlaskRequest) -> FlaskResponse:
-
-      return func(request)
+    def request_view_func(request: FlaskRequest,
+                          response: FlaskResponse) -> FlaskResponse:
+      func(request, response)
+      return response
 
     metadata['id'] = func.__name__
-    manifest = ManifestEndpoint(
+    endpoint = ManifestEndpoint(
         entryPoint=func.__name__,
         region=region,
         platform='gcfv2',
@@ -204,9 +215,9 @@ def on_request(
         minInstances=min_instances,
     )
 
-    request_view_func.firebase_metadata = metadata,
-    request_view_func.trigger = trigger,
-    request_view_func.__endpoint__ = manifest,
+    request_view_func.__firebase_metadata__ = metadata
+    request_view_func.__firebase_trigger__ = trigger
+    request_view_func.__firebase_endpoint__ = endpoint
 
     return request_view_func
 
@@ -325,8 +336,7 @@ def valid_request(request: FlaskRequest) -> bool:
     return False
 
   # Check that the Content-Type is JSON.
-  content_type: Optional[str] = request.headers.get('Content-Type') if getattr(
-      request.headers, 'Content-Type') is not None else ''
+  content_type: Optional[str] = request.headers.get('Content-Type')
 
   if content_type is None:
     warn('Request is missing Content-Type.', content_type)
@@ -507,11 +517,11 @@ def on_call(
   def wrapper(func):
 
     @functools.wraps(func)
-    def call_view_func(request: FlaskRequest, response: FlaskResponse):
+    def call_view_func(request: FlaskRequest):
       wrap_on_call_handler(
           func,
           request,
-          response,
+          FlaskResponse(),
           callable_options,
       )
 
@@ -523,16 +533,16 @@ def on_call(
         region=region,
         platform='gcfv2',
         labels={},
-        httpsTrigger={},
+        httpsTrigger=HttpsTrigger(),
         vpc=vpc,
         availableMemoryMb=memory,
         maxInstances=max_instances,
         minInstances=min_instances,
     )
 
-    call_view_func.firebase_metadata = metadata,
-    call_view_func.trigger = trigger,
-    call_view_func.__endpoint__ = manifest,
+    call_view_func.__firebase_metadata__ = metadata
+    call_view_func.__firebase_trigger__ = trigger
+    call_view_func.__firebase_endpoint__ = manifest
 
     return call_view_func
 

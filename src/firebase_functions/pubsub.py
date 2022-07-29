@@ -77,7 +77,7 @@ def on_message_published(
     metadata['id'] = func.__name__
     project = os.environ.get('GCLOUD_PROJECT')
 
-    manifest = ManifestEndpoint(
+    endpoint = ManifestEndpoint(
         platform='gcfv2',
         entryPoint=func.__name__,
         region=region,
@@ -94,8 +94,8 @@ def on_message_published(
         ),
     )
 
-    pubsub_view_func.firebase_metadata = metadata
-    pubsub_view_func.__endpoint__ = manifest
+    pubsub_view_func.__firebase_metadata__ = metadata
+    pubsub_view_func.__firebase_endpoint__ = endpoint
 
     return pubsub_view_func
 
