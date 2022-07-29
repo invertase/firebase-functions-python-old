@@ -10,7 +10,7 @@ from flask import jsonify
 from flask import request
 from flask import Response
 
-from firebase_functions.manifest import HttpsTrigger, ManifestEndpoint, ManifestStack
+from firebase_functions.manifest import CallableTrigger, HttpsTrigger, ManifestEndpoint, ManifestStack
 from firebase_functions.utils import remove_undrscores
 
 __ALLOWED_METHODS = ['GET', 'POST', 'PUT', 'DELETE']
@@ -96,6 +96,13 @@ def is_http_trigger(endpoint: ManifestEndpoint) -> bool:
   return endpoint.httpsTrigger is not None or isinstance(endpoint, HttpsTrigger)
 
 
+def is_callable_trigger(endpoint: ManifestEndpoint) -> bool:
+  # If the function's trigger contains `httpsTrigger` attribute,
+  # then it's a https function.
+  return endpoint.callableTrigger is not None or isinstance(
+      endpoint, CallableTrigger)
+
+
 def is_pubsub_trigger(endpoint: ManifestEndpoint) -> bool:
   return endpoint.eventTrigger is not None and endpoint.eventTrigger.eventType == 'google.cloud.pubsub.topic.v1.messagePublished'
 
@@ -116,7 +123,7 @@ def serve_triggers(triggers: dict[str, Callable]) -> Flask:
 
     print(endpoint)
 
-    if is_http_trigger(endpoint):
+    if is_http_trigger(endpoint) or is_callable_trigger(endpoint):
       app.add_url_rule(
           f'/{name}',
           endpoint=name,

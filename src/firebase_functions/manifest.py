@@ -21,6 +21,11 @@ class HttpsTrigger():
 
 
 @dataclass(frozen=True)
+class CallableTrigger():
+  pass
+
+
+@dataclass(frozen=True)
 class EventTrigger():
   eventFilters: Optional[dict] = None
   eventFilterPathPatterns: Optional[dict] = None
