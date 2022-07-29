@@ -7,7 +7,7 @@ from typing import TypedDict, Optional, Union
 
 from firebase_functions.options import Memory, Sentinel, VpcOptions
 from firebase_functions.params import IntParam, StringParam
-from firebase_functions.utils import to_camel_case
+from firebase_functions.utils import remove_undrscores
 
 
 class Secret(TypedDict):
@@ -76,7 +76,7 @@ class ManifestEndpoint():
   blockingTrigger: Optional[BlockingTrigger] = None
 
   def __post_init__(self):
-    self.entryPoint = to_camel_case(self.entryPoint)
+    self.entryPoint = remove_undrscores(self.entryPoint)
 
 
 @dataclass(frozen=True)

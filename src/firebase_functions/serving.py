@@ -11,7 +11,7 @@ from flask import request
 from flask import Response
 
 from firebase_functions.manifest import HttpsTrigger, ManifestEndpoint, ManifestStack
-from firebase_functions.utils import to_camel_case
+from firebase_functions.utils import remove_undrscores
 
 __ALLOWED_METHODS = ['GET', 'POST', 'PUT', 'DELETE']
 
@@ -86,7 +86,7 @@ def wrap_functions_yaml(triggers) -> Any:
 def add_entrypoint(name, trigger) -> dict:
   """Add an entrypoint for a single function in the user's codebase."""
   endpoint = {}
-  endpoint[to_camel_case(name)] = trigger
+  endpoint[remove_undrscores(name)] = trigger
   return endpoint
 
 
