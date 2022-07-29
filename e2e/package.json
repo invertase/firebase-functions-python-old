@@ -1,0 +1,11 @@
+{
+  "name": "firebase-functions-python-e2e",
+  "private": true,
+  "scripts": {
+    "test": "jest"
+  },
+  "devDependencies": {
+    "firebase": "^9.9.1",
+    "jest": "^28.1.3"
+  }
+}
