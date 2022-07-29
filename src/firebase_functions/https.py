@@ -13,7 +13,7 @@ from firebase_admin import auth
 from firebase_functions import apps
 from firebase_functions.log import (error, info, warn, debug)
 from firebase_functions.errors import FunctionsErrorCode, HttpsError
-from firebase_functions.manifest import HttpsTrigger, ManifestEndpoint
+from firebase_functions.manifest import CallableTrigger, HttpsTrigger, ManifestEndpoint
 from firebase_functions.params import (SecretParam, StringParam, IntParam,
                                        ListParam)
 from firebase_functions.options import (HttpsOptions, Memory, VpcOptions,
@@ -533,7 +533,7 @@ def on_call(
         region=region,
         platform='gcfv2',
         labels={},
-        httpsTrigger=HttpsTrigger(),
+        callableTrigger=CallableTrigger(),
         vpc=vpc,
         availableMemoryMb=memory,
         maxInstances=max_instances,
