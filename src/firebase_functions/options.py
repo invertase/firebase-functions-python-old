@@ -3,7 +3,7 @@ from dataclasses import dataclass
 import os
 from typing import List, Optional, Union
 
-from firebase_functions.params import IntParam, ListParam, SecretParam, StringParam
+from firebase_functions.params import IntParam, SecretParam, StringParam
 
 
 class Sentinel:

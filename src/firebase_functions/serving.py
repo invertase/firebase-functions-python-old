@@ -2,7 +2,7 @@ import asyncio
 import dataclasses
 from enum import Enum
 import sys
-from typing import Any, Callable
+from typing import Any, Callable, List
 from yaml import load, dump
 
 from flask import Flask
@@ -10,7 +10,8 @@ from flask import jsonify
 from flask import request
 from flask import Response
 
-from firebase_functions.manifest import ManifestEndpoint, ManifestStack
+from firebase_functions.manifest import CallableTrigger, HttpsTrigger, ManifestEndpoint, ManifestStack
+from firebase_functions.utils import remove_undrscores
 
 __ALLOWED_METHODS = ['GET', 'POST', 'PUT', 'DELETE']
 
@@ -68,7 +69,7 @@ def wrap_functions_yaml(triggers) -> Any:
       endpoint = add_entrypoint(
           name,
           clean_nones(
-              dataclasses.asdict(trig.__endpoint__,
+              dataclasses.asdict(trig.__firebase_endpoint__,
                                  dict_factory=asdict_factory)),
       )
       trigger_data.update(endpoint)
@@ -85,46 +86,53 @@ def wrap_functions_yaml(triggers) -> Any:
 def add_entrypoint(name, trigger) -> dict:
   """Add an entrypoint for a single function in the user's codebase."""
   endpoint = {}
-  endpoint[name] = trigger
+  endpoint[remove_undrscores(name)] = trigger
   return endpoint
 
 
-def is_http_trigger(trigger: ManifestEndpoint) -> bool:
+def is_http_trigger(endpoint: ManifestEndpoint) -> bool:
   # If the function's trigger contains `httpsTrigger` attribute,
   # then it's a https function.
-  return trigger.httpsTrigger is not None or trigger.httpsTrigger != {}
+  return endpoint.httpsTrigger is not None or isinstance(
+      endpoint.httpsTrigger, HttpsTrigger)
 
 
-def is_pubsub_trigger(trigger: ManifestEndpoint) -> bool:
-  return trigger.eventTrigger is not None and trigger.eventTrigger[
-      'eventType'] == 'google.cloud.pubsub.topic.v1.messagePublished'
+def is_callable_trigger(endpoint: ManifestEndpoint) -> bool:
+  # If the function's trigger contains `httpsTrigger` attribute,
+  # then it's a https function.
+  return endpoint.callableTrigger is not None or isinstance(
+      endpoint.callableTrigger, CallableTrigger)
 
 
-def serve_triggers(triggers: list[Callable]) -> Flask:
+def is_pubsub_trigger(endpoint: ManifestEndpoint) -> bool:
+  return endpoint.eventTrigger is not None and endpoint.eventTrigger.eventType == 'google.cloud.pubsub.topic.v1.messagePublished'
+
+
+def serve_triggers(triggers: dict[str, Callable]) -> Flask:
   """
   Start serving all triggers provided by the user locally.
   Used by the generated `app` file upon deployment.
   """
   app = Flask(__name__)
 
-  for trig in triggers:
+  for name, trigger in triggers.items():
 
-    trigger = getattr(trig, '__endpoint__')
-    metadata = getattr(trig, 'firebase_metadata')
-    name = metadata['id']
+    endpoint = getattr(trigger, '__firebase_endpoint__')
 
-    if is_http_trigger(trigger):
+    if is_http_trigger(endpoint) or is_callable_trigger(endpoint):
       app.add_url_rule(
           f'/{name}',
           endpoint=name,
-          view_func=wrap_http_trigger(trig),
+          view_func=wrap_http_trigger(trigger),
           methods=__ALLOWED_METHODS,
       )
-    elif is_pubsub_trigger(trigger):
-      app.add_url_rule(f'/{name}',
-                       endpoint=name,
-                       view_func=wrap_pubsub_trigger(trig),
-                       methods=['POST'])
+    elif is_pubsub_trigger(endpoint):
+      app.add_url_rule(
+          f'/{name}',
+          endpoint=name,
+          view_func=wrap_pubsub_trigger(trigger),
+          methods=['POST'],
+      )
     else:
       raise ValueError('Unknown trigger type!')
 

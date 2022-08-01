@@ -23,8 +23,8 @@ def get_exports(file_path: str):
   funcs = inspect.getmembers(module, inspect.isfunction)
   exports = {}
   for func in funcs:
-    if hasattr(func[1], 'firebase_metadata'):
-      exports[func[0]] = getattr(func[1], 'firebase_metadata')
+    if hasattr(func[1], '__firebase_metadata__'):
+      exports[func[0]] = getattr(func[1], '__firebase_metadata__')
 
   return exports
 
