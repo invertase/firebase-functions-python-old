@@ -4,8 +4,11 @@ Module used to serve Firebase functions locally and remotely.
 
 import asyncio
 import dataclasses
-from enum import Enum
 import sys
+import asyncio
+import dataclasses
+
+from enum import Enum
 from typing import Any, Callable
 from yaml import dump
 
@@ -14,7 +17,8 @@ from flask import jsonify
 from flask import request
 from flask import Response
 
-from firebase_functions.manifest import CallableTrigger, HttpsTrigger, ManifestEndpoint, ManifestStack
+from firebase_functions.manifest import CallableTrigger, HttpsTrigger, ManifestEndpoint, Manifest
+from firebase_functions.options import Sentinel
 
 __ALLOWED_METHODS = ['GET', 'POST', 'PUT', 'DELETE']
 
@@ -24,9 +28,12 @@ def asdict_factory(data) -> dict:
   def convert_value(obj):
     if isinstance(obj, Enum):
       return obj.value
+    elif isinstance(obj, Sentinel):
+      return None
+
     return obj
 
-  return dict((k, convert_value(v)) for k, v in data)
+  return dict((k, convert_value(v)) for k, v in data if v is not None)
 
 
 def wrap_http_trigger(trig: Callable) -> Callable:
@@ -51,15 +58,20 @@ def wrap_pubsub_trigger(trig):
   return wrapper
 
 
-def clean_nones(value) -> Any:
-  if isinstance(value, list):
-    return [clean_nones(x) for x in value if x is not None]
-  elif isinstance(value, dict):
-    return {
-        key: clean_nones(val) for key, val in value.items() if val is not None
-    }
-  else:
-    return value
+def clean_nones_and_set_default(value: dict) -> Any:
+  """Remove all `None` values from the generated manifest, and set Sentinels to None."""
+
+  result: dict = {}
+
+  for k, v in value.items():
+    if v is Sentinel:
+      result[k] = None
+    elif v is None:
+      continue
+    else:
+      result[k] = value
+
+  return result
 
 
 def wrap_functions_yaml(triggers) -> Any:
@@ -71,16 +83,18 @@ def wrap_functions_yaml(triggers) -> Any:
     for name, trig in triggers.items():
       endpoint = add_entrypoint(
           name,
-          clean_nones(
-              dataclasses.asdict(trig.__firebase_endpoint__,
-                                 dict_factory=asdict_factory)),
+          dataclasses.asdict(
+              trig.__firebase_endpoint__,
+              dict_factory=asdict_factory,
+          ),
       )
       trigger_data.update(endpoint)
 
-    result = ManifestStack(endpoints=trigger_data)
-    response = dump(clean_nones(result.__dict__),
-                    default_flow_style=False,
-                    default_style=None)
+    result = Manifest(endpoints=trigger_data)
+    response = dump(dataclasses.asdict(
+        result,
+        dict_factory=asdict_factory,
+    ))
     return Response(response, mimetype='text/yaml')
 
   return wrapper
@@ -97,20 +111,18 @@ def add_entrypoint(name, trigger) -> dict:
 def is_http_trigger(endpoint: ManifestEndpoint) -> bool:
   # If the function's trigger contains `httpsTrigger` attribute,
   # then it's a https function.
-  return endpoint.httpsTrigger is not None or isinstance(
-      endpoint.httpsTrigger, HttpsTrigger)
+  return endpoint.httpsTrigger is not None or endpoint.httpsTrigger is HttpsTrigger
 
 
 def is_callable_trigger(endpoint: ManifestEndpoint) -> bool:
   # If the function's trigger contains `httpsTrigger` attribute,
   # then it's a https function.
-  return endpoint.callableTrigger is not None or isinstance(
-      endpoint.callableTrigger, CallableTrigger)
+  return endpoint.callableTrigger is not None or endpoint.callableTrigger is CallableTrigger
 
 
 def is_pubsub_trigger(endpoint: ManifestEndpoint) -> bool:
-  return (endpoint.eventTrigger is not None and endpoint.eventTrigger.eventType
-          == 'google.cloud.pubsub.topic.v1.messagePublished')
+  return endpoint.eventTrigger is not None and endpoint.eventTrigger[
+      'eventType'] == 'google.cloud.pubsub.topic.v1.messagePublished'
 
 
 def serve_triggers(triggers: dict[str, Callable]) -> Flask:

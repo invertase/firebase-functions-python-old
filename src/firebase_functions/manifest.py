@@ -4,6 +4,7 @@
 
 from dataclasses import dataclass
 from typing import TypedDict, Optional, Union
+from typing_extensions import NotRequired
 
 from firebase_functions.options import Memory, Sentinel, VpcOptions
 from firebase_functions.params import IntParam, StringParam
@@ -14,25 +15,22 @@ class Secret(TypedDict):
   secret: Union[str, None]
 
 
-@dataclass(frozen=True)
-class HttpsTrigger():
-  invoker: Optional[list[str]] = None
+class HttpsTrigger(TypedDict):
+  invoker: NotRequired[list[str]]
 
 
-@dataclass(frozen=True)
-class CallableTrigger():
+class CallableTrigger(TypedDict):
   pass
 
 
-@dataclass(frozen=True)
-class EventTrigger():
-  eventFilters: Optional[dict] = None
-  eventFilterPathPatterns: Optional[dict] = None
-  channel: Optional[str] = None
-  eventType: Optional[str] = None
-  retry: Optional[bool] = None
-  region: Optional[str] = None
-  serviceAccountEmail: Optional[str] = None
+class EventTrigger(TypedDict):
+  eventFilters: NotRequired[dict]
+  eventFilterPathPatterns: NotRequired[dict]
+  channel: NotRequired[str]
+  eventType: NotRequired[str]
+  retry: NotRequired[bool]
+  region: NotRequired[str]
+  serviceAccountEmail: NotRequired[str]
 
 
 class RetryConfig(TypedDict):
@@ -54,18 +52,20 @@ class BlockingTrigger(TypedDict):
   options: dict
 
 
-@dataclass()
+ServiceAccount = str
+
+
+@dataclass(frozen=True)
 class ManifestEndpoint():
   """An definition of a function as appears in the Manifest."""
 
   entryPoint: str
   region: Optional[Union[StringParam, str]] = None
-  platform: Optional[str] = None
   availableMemoryMb: Union[IntParam, Memory, Sentinel, None] = None
   maxInstances: Union[None, IntParam, int, Sentinel] = None
   minInstances: Union[None, IntParam, int, Sentinel] = None
   concurrency: Optional[int] = None
-  serviceAccountEmail: Optional[str] = None
+  serviceAccount: Optional[ServiceAccount] = None
   timeoutSeconds: Optional[int] = None
   cpu: Union[int, str] = 'gcf_gen1'
   vpc: Union[None, VpcOptions, Sentinel] = None
@@ -78,16 +78,17 @@ class ManifestEndpoint():
   eventTrigger: Optional[EventTrigger] = None
   scheduleTrigger: Optional[ScheduleTrigger] = None
   blockingTrigger: Optional[BlockingTrigger] = None
+  platform: str = 'gcfv2'
+
+
+class RequiredAPi(TypedDict):
+  apiName: str
+  reason: NotRequired[str]
 
 
 @dataclass(frozen=True)
-class ManifestRequiredAPI():
-  api: str
-  reason: str
-
-
-@dataclass(frozen=True)
-class ManifestStack():
+class Manifest():
   specVersion: str = 'v1alpha1'
+  requiredApis: Optional[list[RequiredAPi]] = None
+  params: Optional[list[str]] = None
   endpoints: Optional[dict[str, ManifestEndpoint]] = None
-  requiredAPIs: Union[Optional[list[ManifestRequiredAPI]], None] = None

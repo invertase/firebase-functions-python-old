@@ -32,7 +32,7 @@ def http_request_function(req: Request, res: Response):
     memory=options.Memory.MB_256,
     region='us-central-1',
 )
-def httpcallablefunction(req: CallableRequest):
+def http_callable_function(req: CallableRequest):
 
   debug('Debugging on_call')
   debug(f'Data: {req.data}')

@@ -109,7 +109,6 @@ class GlobalOptions:
 global_options = GlobalOptions()
 
 
-@dataclass()
 class HttpsOptions(GlobalOptions):
   '''Options available for all function types in a codebase.
 
@@ -131,11 +130,35 @@ class HttpsOptions(GlobalOptions):
 
   allow_invalid_app_check_token: Optional[bool] = None
 
-  def __post_init__(self):
-    self.max_instances = self.max_instances or global_options.max_instances
+  def __init__(
+      self,
+      max_instances=None,
+      min_instances=None,
+      timeout_sec=None,
+      memory=None,
+      region=None,
+      allowed_origins=None,
+      allowed_methods=None,
+      service_account=None,
+      vpc=None,
+      ingress=None,
+      secrets=None,
+      allow_invalid_app_check_token=None,
+  ):
+    self.max_instances = max_instances or global_options.max_instances
+    self.allowed_methods = allowed_methods or min_instances or self.allowed_methods or global_options.allowed_methods
+    self.allowed_origins = allowed_origins or self.allowed_origins or global_options.allowed_origins
+    self.ingress = ingress or self.ingress or global_options.ingress
+    self.region = region or self.region or global_options.region
+    self.memory = memory or self.memory or global_options.memory
+    self.timeout_sec = timeout_sec or self.timeout_sec or global_options.timeout_sec
+    self.min_instances = self.min_instances or global_options.min_instances
+    self.vpc = vpc or self.vpc or global_options.vpc
+    self.service_account = service_account or self.service_account or global_options.service_account
+    self.secrets = secrets or self.secrets or global_options.secrets
+    self.allow_invalid_app_check_token = allow_invalid_app_check_token
 
 
-@dataclass()
 class PubSubOptions(GlobalOptions):
   '''Options available for all Pub/Sub function types in a codebase.
 
@@ -158,8 +181,33 @@ class PubSubOptions(GlobalOptions):
 
   topic: Optional[str] = None
 
-  def __post_init__(self):
-    self.max_instances = self.max_instances or global_options.max_instances
+  def __init__(
+      self,
+      max_instances=None,
+      min_instances=None,
+      timeout_sec=None,
+      memory=None,
+      region=None,
+      allowed_origins=None,
+      allowed_methods=None,
+      service_account=None,
+      vpc=None,
+      ingress=None,
+      secrets=None,
+      topic=None,
+  ):
+    self.max_instances = max_instances or self.max_instances or global_options.max_instances
+    self.allowed_methods = allowed_methods or min_instances or self.allowed_methods or global_options.allowed_methods
+    self.allowed_origins = allowed_origins or self.allowed_origins or global_options.allowed_origins
+    self.ingress = ingress or self.ingress or global_options.ingress
+    self.region = region or self.region or global_options.region
+    self.memory = memory or self.memory or global_options.memory
+    self.timeout_sec = timeout_sec or self.timeout_sec or global_options.timeout_sec
+    self.min_instances = self.min_instances or global_options.min_instances
+    self.vpc = vpc or self.vpc or global_options.vpc
+    self.service_account = service_account or self.service_account or global_options.service_account
+    self.secrets = secrets or self.secrets or global_options.secrets
+    self.topic = topic
 
   def metadata(self):
     project = os.environ.get('GCLOUD_PROJECT')

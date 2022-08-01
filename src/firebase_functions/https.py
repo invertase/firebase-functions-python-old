@@ -183,14 +183,7 @@ def on_request(
       secrets=secrets,
   )
 
-  metadata = {} if request_options is None else request_options.metadata()
-  trigger = {
-      'platform': 'gcfv2',
-      **metadata, 'labels': {},
-      'httpsTrigger': {
-          'allowInsecure': False
-      }
-  }
+  trigger = {} if request_options is None else request_options.metadata()
 
   def wrapper(func):
 
@@ -199,20 +192,20 @@ def on_request(
       func(request, response)
       return response
 
-    metadata['id'] = func.__name__
     endpoint = ManifestEndpoint(
         entryPoint=func.__name__,
-        region=region,
-        platform='gcfv2',
-        labels={},
         httpsTrigger=HttpsTrigger(),
-        vpc=vpc,
-        availableMemoryMb=memory,
-        maxInstances=max_instances,
-        minInstances=min_instances,
+        region=request_options.region,
+        availableMemoryMb=request_options.memory,
+        timeoutSeconds=request_options.timeout_sec,
+        minInstances=request_options.min_instances,
+        maxInstances=request_options.max_instances,
+        vpc=request_options.vpc,
+        ingressSettings=request_options.ingress,
+        serviceAccount=request_options.service_account,
+        secretEnvironmentVariables=request_options.secrets,
     )
 
-    request_view_func.__firebase_metadata__ = metadata
     request_view_func.__firebase_trigger__ = trigger
     request_view_func.__firebase_endpoint__ = endpoint
 
@@ -500,20 +493,7 @@ def on_call(
       secrets=secrets,
   )
 
-  metadata = {} if callable_options is None else callable_options.metadata()
-
-  trigger = {
-      'platform': 'gcfv2',
-      **metadata, 'labels': {
-          'deployment-callable': 'true',
-      },
-      'httpsTrigger': {
-          'allowInsecure': False
-      }
-  }
-
-  metadata['apiVersion'] = 1
-  metadata['trigger'] = {}
+  trigger = {} if callable_options is None else callable_options.metadata()
 
   def wrapper(func):
 
@@ -526,20 +506,20 @@ def on_call(
           options=callable_options,
       )
 
-    metadata['id'] = func.__name__
     manifest = ManifestEndpoint(
-        entryPoint=metadata['id'],
-        region=region,
-        platform='gcfv2',
-        labels={},
+        entryPoint=func.__name__,
         callableTrigger=CallableTrigger(),
-        vpc=vpc,
-        availableMemoryMb=memory,
-        maxInstances=max_instances,
-        minInstances=min_instances,
+        region=callable_options.region,
+        availableMemoryMb=callable_options.memory,
+        timeoutSeconds=callable_options.timeout_sec,
+        minInstances=callable_options.min_instances,
+        maxInstances=callable_options.max_instances,
+        vpc=callable_options.vpc,
+        ingressSettings=callable_options.ingress,
+        serviceAccount=callable_options.service_account,
+        secretEnvironmentVariables=callable_options.secrets,
     )
 
-    call_view_func.__firebase_metadata__ = metadata
     call_view_func.__firebase_trigger__ = trigger
     call_view_func.__firebase_endpoint__ = manifest
 
