@@ -210,7 +210,7 @@ class StringParam(_Param[str], ComparableExpression[str]):
     elif self.default is not None:
       return self.default
     else:
-      return ''
+      return str()
 
 
 @dataclass(frozen=True)
@@ -225,7 +225,7 @@ class IntParam(_Param[int], ComparableExpression[int]):
     elif self.default is not None:
       return self.default
     else:
-      return 0
+      return int()
 
 
 @dataclass(frozen=True)
@@ -235,22 +235,23 @@ class FloatParam(_Param[float], ComparableExpression[float]):
   def value(self) -> float:
     if os.environ.get(self.name) is not None:
       return float(os.environ[self.name])
-    elif isinstance(self.default, Expression[float]):
+    elif isinstance(self.default, Expression):
       return self.default.value()
     elif self.default is not None:
       return self.default
     else:
-      return 0.0
+      return float()
 
 
 @dataclass(frozen=True)
 class ListParam(_Param[Iterable[str]]):
-  """ A list of strings parameter.  """
+  """ A list of strings parameter. """
 
   def value(self) -> Iterable[str]:
     if os.environ.get(self.name) is not None:
-      return os.environ[self.name].split("\n")
-      # TODO. Should delim be a parameter here?
+      return os.environ[self.name].split(",")
+    elif isinstance(self.default, Expression):
+      return self.default.value()
     elif self.default is not None:
       return self.default
     else:

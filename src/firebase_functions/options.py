@@ -171,15 +171,17 @@ class PubSubOptions(GlobalOptions):
     }
 
 
-def set_global_options(*,
-                       region: Optional[str] = None,
-                       memory: Union[None, int, Sentinel] = None,
-                       timeout_sec: Union[None, int, Sentinel] = None,
-                       min_instances: Union[None, int, Sentinel] = None,
-                       max_instances: Union[None, IntParam, Sentinel] = None,
-                       vpc: Union[None, VpcOptions, Sentinel] = None,
-                       ingress: Union[None, IngressSettings, Sentinel] = None,
-                       service_account: Union[None, str, Sentinel] = None):
+def set_global_options(
+    *,
+    region: Optional[str] = None,
+    memory: Union[None, int, Sentinel] = None,
+    timeout_sec: Union[None, int, Sentinel] = None,
+    min_instances: Union[None, int, Sentinel] = None,
+    max_instances: Union[None, int, Sentinel] = None,
+    vpc: Union[None, VpcOptions, Sentinel] = None,
+    ingress: Union[None, IngressSettings, Sentinel] = None,
+    service_account: Union[None, str, Sentinel] = None,
+):
   global global_options
   global_options = GlobalOptions(
       region=region,
