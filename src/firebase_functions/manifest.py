@@ -7,7 +7,6 @@ from typing import TypedDict, Optional, Union
 
 from firebase_functions.options import Memory, Sentinel, VpcOptions
 from firebase_functions.params import IntParam, StringParam
-from firebase_functions.utils import remove_undrscores
 
 
 class Secret(TypedDict):
