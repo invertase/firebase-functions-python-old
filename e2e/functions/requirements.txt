@@ -1,0 +1,2 @@
+# firebase-functions-python
+git+https://github.com/invertase/firebase-functions-python.git@mypy-refactor#egg=firebase-functions
