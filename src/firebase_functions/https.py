@@ -388,7 +388,7 @@ def wrap_on_call_handler(
 ) -> Response:
   try:
     if not valid_request(request):
-      # TODO use the Cloud Logger to log an error entry.
+      error('Invalid request, unable to process.')
       raise HttpsError(FunctionsErrorCode.INVALID_ARGUMENT, 'Bad Request')
 
     context: CallableRequest = CallableRequest(raw_request=request)
