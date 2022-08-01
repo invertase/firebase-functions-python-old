@@ -16,7 +16,7 @@ class CloudEvent(Generic[T]):
   data: T
 
 
-_apps: Set[firebase_admin.App] = Set()
+_apps: Set[firebase_admin.App] = set()
 
 
 def apps() -> firebase_admin.App:
