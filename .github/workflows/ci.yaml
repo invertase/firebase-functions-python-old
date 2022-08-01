@@ -25,8 +25,10 @@ jobs:
           python setup.py install
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-      - name: Test with pytest
-        run: python -m pytest
+      - name: Test with pytest & coverage
+        run: python -m pytest --cov=src --cov-report term --cov-report html --cov-report xml > pytest-coverage.txt
+      - name: Comment coverage
+        uses: coroo/pytest-coverage-commentator@v1.0.2
 
   lint:
     runs-on: ubuntu-latest
