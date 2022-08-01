@@ -19,8 +19,8 @@ from firebase_functions.params import (SecretParam, StringParam, IntParam,
 from firebase_functions.options import (HttpsOptions, Memory, VpcOptions,
                                         IngressSettings, Sentinel)
 
-FlaskRequest = flask.Request
-FlaskResponse = flask.Response
+Request = flask.Request
+Response = flask.Response
 
 T = TypeVar('T')
 
@@ -105,7 +105,7 @@ class AuthData:
 class CallableRequest(Generic[T]):
   '''The request sent to a callable function.'''
 
-  raw_request: FlaskRequest
+  raw_request: Request
   '''The raw request handled by the callable.'''
 
   data: Optional[T] = None
@@ -121,18 +121,8 @@ class CallableRequest(Generic[T]):
   '''An unverified token for a Firebase Instance ID.'''
 
 
-# def wrap_on_request_handler(
-#     func: Callable[[FlaskRequest], FlaskResponse],
-#     request: FlaskRequest,
-#     response: FlaskResponse,
-#     options: HttpsOptions,
-# ) -> FlaskResponse:
-
-#   return response
-
-
 def on_request(
-    func: Callable[[FlaskRequest, FlaskResponse], None] = None,
+    func: Callable[[Request, Response], None] = None,
     *,
     allowed_origins: Optional[StringParam] = None,
     allowed_methods: Optional[StringParam] = None,
@@ -145,7 +135,7 @@ def on_request(
     ingress: Union[None, IngressSettings, Sentinel] = None,
     service_account: Union[None, StringParam, StringParam, Sentinel] = None,
     secrets: Union[List[StringParam], SecretParam, Sentinel, None] = None,
-) -> Callable[[FlaskRequest], None]:
+) -> Callable[[Request], None]:
   """Decorator for a function that handles raw HTTPS requests.
 
   Parameters:
@@ -199,8 +189,7 @@ def on_request(
   def wrapper(func):
 
     @functools.wraps(func)
-    def request_view_func(request: FlaskRequest,
-                          response: FlaskResponse) -> FlaskResponse:
+    def request_view_func(request: Request, response: Response) -> Response:
       func(request, response)
       return response
 
@@ -257,7 +246,7 @@ class CallableTokenStatus():
     }
 
 
-def check_auth_token(req: FlaskRequest, ctx: CallableRequest) -> TokenStatus:
+def check_auth_token(req: Request, ctx: CallableRequest) -> TokenStatus:
   ''' Validate the auth token in the callable request. '''
   authorization = req.headers.get('Authorization')
   if authorization is None:
@@ -281,7 +270,7 @@ def check_auth_token(req: FlaskRequest, ctx: CallableRequest) -> TokenStatus:
   return TokenStatus.INVALID
 
 
-def check_app_token(req: FlaskRequest, ctx: CallableRequest) -> TokenStatus:
+def check_app_token(req: Request, ctx: CallableRequest) -> TokenStatus:
   ''' Validate the app token in the callable request. '''
   app_check = req.headers.get('X-Firebase-AppCheck')
   if app_check is None:
@@ -295,7 +284,7 @@ def check_app_token(req: FlaskRequest, ctx: CallableRequest) -> TokenStatus:
 
 
 def check_tokens(
-    req: FlaskRequest,
+    req: Request,
     ctx: CallableRequest,
 ) -> CallableTokenStatus:
   verifications = CallableTokenStatus()
@@ -329,7 +318,7 @@ def check_tokens(
   return verifications
 
 
-def valid_request(request: FlaskRequest) -> bool:
+def valid_request(request: Request) -> bool:
   # The body must not be empty.
   if request.json is None:
     warn('Request is missing body.')
@@ -393,10 +382,10 @@ class HttpResponseBody:
 
 def wrap_on_call_handler(
     func: Callable[[CallableRequest], Any],
-    request: FlaskRequest,
-    response: FlaskResponse,
+    request: Request,
+    response: Response,
     options: HttpsOptions,
-) -> FlaskResponse:
+) -> Response:
   try:
     if not valid_request(request):
       # TODO use the Cloud Logger to log an error entry.
@@ -431,7 +420,6 @@ def wrap_on_call_handler(
         app=context.app,
         instance_id_token=context.instance_id_token,
     )
-
 
     result = func(arg)
 
@@ -520,11 +508,11 @@ def on_call(
   def wrapper(func):
 
     @functools.wraps(func)
-    def call_view_func(request: FlaskRequest):
+    def call_view_func(request: Request):
       return wrap_on_call_handler(
           func=func,
           request=request,
-          response=FlaskResponse(),
+          response=Response(),
           options=callable_options,
       )
 
