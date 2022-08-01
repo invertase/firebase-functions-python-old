@@ -75,6 +75,8 @@ error_code_map = {
         HttpErrorCode(CanonicalErrorCodeName.NOT_FOUND, 404),
     FunctionsErrorCode.ALREADY_EXISTS:
         HttpErrorCode(CanonicalErrorCodeName.ALREADY_EXISTS, 409),
+    FunctionsErrorCode.INTERNAL:
+        HttpErrorCode(CanonicalErrorCodeName.INTERNAL, 500),
     FunctionsErrorCode.PERMISSION_DENIED:
         HttpErrorCode(CanonicalErrorCodeName.PERMISSION_DENIED, 403),
     FunctionsErrorCode.UNAUTHENTICATED:

@@ -329,7 +329,6 @@ def valid_request(request: Request) -> bool:
     warn('Request has invalid method.', request.method)
     return False
 
-  # Check that the Content-Type is JSON.
   content_type: Optional[str] = request.headers.get('Content-Type')
 
   if content_type is None:
@@ -346,6 +345,7 @@ def valid_request(request: Request) -> bool:
   except ValueError:
     pass
 
+  # Check that the Content-Type is JSON.
   if content_type != 'application/json':
 
     warn('Request has incorrect Content-Type.', content_type)
