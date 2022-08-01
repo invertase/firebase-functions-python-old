@@ -278,7 +278,7 @@ def check_app_token(req: Request, ctx: CallableRequest) -> TokenStatus:
 
   # TODO validate the token using the Admin SDK once app check is supported.
   # For now, just assume it's valid.
-  warn(f'App check is not supported in the Admin SDK.')
+  warn('App check is not supported in the Admin SDK.')
   ctx = dataclasses.replace(ctx, app=None)
   return TokenStatus.VALID
 
