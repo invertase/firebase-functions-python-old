@@ -261,7 +261,22 @@ class ListParam(_Param[Iterable[str]]):
 @dataclass(frozen=True)
 class BoolParam(_Param[bool], BoolExpression):
   """A boolean parameter """
-  pass
+
+  def value(self) -> bool:
+    env_value = os.environ.get(self.name)
+    if env_value is not None:
+      if (env_value.lower() in ["true", "t", "1", "y", "yes"]):
+        return True
+      elif (env_value.lower() in ["false", "f", "0", "n", "no"]):
+        return False
+      else:
+        raise ValueError(f"Invalid value for {self.name}: {env_value}")
+    elif isinstance(self.default, Expression):
+      return self.default.value()
+    elif self.default is not None:
+      return self.default
+    else:
+      return False
 
 
 @dataclass(frozen=True)
