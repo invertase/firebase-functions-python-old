@@ -2,6 +2,7 @@
 
 from enum import Enum
 from typing import Any, Optional, TypedDict
+from typing_extensions import NotRequired
 
 
 class CanonicalErrorCodeName(str, Enum):
@@ -82,7 +83,7 @@ error_code_map = {
 
 
 class HttpErrorWireFormat(TypedDict):
-  details: Optional[Any]
+  details: NotRequired[Any]
   status: CanonicalErrorCodeName
   message: str
 
@@ -110,8 +111,14 @@ class HttpsError(Exception):
     return self.code.canonical_name.value
 
   def to_dict(self):
+    if self.details is None:
+      return HttpErrorWireFormat(
+          status=self.code.canonical_name.value,
+          message=self.message,
+      )
+
     return HttpErrorWireFormat(
-        details={self.details} if self.details is not None else {},
+        details={self.details},
         status=self.http_error_code.canonical_name,
         message=self.message,
     )
