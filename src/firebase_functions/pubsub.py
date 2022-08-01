@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from firebase_functions import CloudEvent
 from firebase_functions.options import PubSubOptions, Sentinel, VpcOptions, Memory, IngressSettings
 from firebase_functions.manifest import EventTrigger, ManifestEndpoint
-from firebase_functions.params import SecretParam, StringParam, IntParam, ListParam
+from firebase_functions.params import SecretParam, StringParam, IntParam
 
 T = TypeVar('T')
 

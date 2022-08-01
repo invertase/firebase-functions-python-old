@@ -1,4 +1,7 @@
-from copy import deepcopy
+"""Module for Cloud Functions that listen to HTTPS endpoints.
+These can be raw web requests and Callable RPCs.
+"""
+
 import dataclasses
 from enum import Enum
 import functools
@@ -11,11 +14,14 @@ from collections.abc import Callable
 from firebase_admin import auth
 
 from firebase_functions import apps
-from firebase_functions.log import (error, info, warn, debug)
+from firebase_functions.log import (error, info, warn)
 from firebase_functions.errors import FunctionsErrorCode, HttpsError
 from firebase_functions.manifest import CallableTrigger, HttpsTrigger, ManifestEndpoint
-from firebase_functions.params import (SecretParam, StringParam, IntParam,
-                                       ListParam)
+from firebase_functions.params import (
+    SecretParam,
+    StringParam,
+    IntParam,
+)
 from firebase_functions.options import (HttpsOptions, Memory, VpcOptions,
                                         IngressSettings, Sentinel)
 
@@ -352,7 +358,7 @@ def valid_request(request: Request) -> bool:
     return False
 
   # The body must have data.
-  if request.json['data'] == None:
+  if request.json['data'] is None:
     # TODO should we check if data exists or not?
     warn('Request body is missing data.', request.json)
     return False
@@ -397,7 +403,8 @@ def wrap_on_call_handler(
     if token_status.auth == TokenStatus.INVALID:
       raise HttpsError(FunctionsErrorCode.UNAUTHENTICATED, 'Unauthenticated')
 
-    if token_status.app == TokenStatus.INVALID and not options.allow_invalid_app_check_token:
+    if (token_status.app == TokenStatus.INVALID and
+        not options.allow_invalid_app_check_token):
       raise HttpsError(FunctionsErrorCode.UNAUTHENTICATED, 'Unauthenticated')
 
     instance_id = request.headers.get('Firebase-Instance-ID-Token')
@@ -424,6 +431,9 @@ def wrap_on_call_handler(
     result = func(arg)
 
     response = flask.jsonify(data=result, status=200)
+  # Disable broad exceptions lint since we want to handle all exceptions here
+  # and wrap as an HttpsError.
+  # pylint: disable=broad-except
   except Exception as err:
     if not isinstance(err, HttpsError):
       error('Unhandled error', err)

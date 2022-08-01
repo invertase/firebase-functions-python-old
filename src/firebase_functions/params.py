@@ -124,7 +124,7 @@ class BoolExpression(Expression[bool]):
   """ A boolean expression supports boolean operators """
 
   def expression(self) -> str:
-    return 'bool'
+    return "bool"
 
   def value(self) -> bool:
     pass
@@ -150,9 +150,6 @@ class _EqualityExpression(BoolExpression):
 @dataclass(frozen=True)
 class ComparableExpression(Expression[E]):
   """ An expression which supports the equals method """
-
-  def __eq__(self, __o: object) -> bool:
-    return super().__eq__(__o)
 
   def __str__(self) -> str:
     """ Returns the full expression in a {{ }} escape sequence """
@@ -180,8 +177,7 @@ class _Param(Expression[E]):
       default: What value the parameter should have if not specified.
       immutable: Whether the value of this parameter can change between function
         deployments.
-      input_type: Method of prompting a user for this variable. Defaults to
-        TextInput[E]
+      input_type: Method of prompting a user for this variable.
   """
   name: str
   label: Optional[str] = None

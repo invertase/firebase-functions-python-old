@@ -3,10 +3,13 @@ Code generator.
 """
 
 import importlib
+from importlib.abc import Loader
+from importlib.machinery import ModuleSpec
 import importlib.util
 import inspect
 import os
 import sys
+from typing import cast
 
 
 def get_module_name(file_path: str):
@@ -16,9 +19,12 @@ def get_module_name(file_path: str):
 
 def get_exports(file_path: str):
   modname = get_module_name(file_path)
-  spec = importlib.util.spec_from_file_location(modname, file_path)
+  spec = cast(
+      ModuleSpec,
+      importlib.util.spec_from_file_location(modname, file_path),
+  )
   module = importlib.util.module_from_spec(spec)
-  spec.loader.exec_module(module)
+  cast(Loader, spec.loader).exec_module(module)
 
   funcs = inspect.getmembers(module, inspect.isfunction)
   exports = {}

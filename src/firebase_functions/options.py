@@ -1,3 +1,7 @@
+"""Module for options that can be used to configure Cloud Functions
+deployments.
+"""
+
 from enum import Enum
 from dataclasses import dataclass
 import os

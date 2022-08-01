@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 import datetime
-from typing import Generic, Set, TypeVar
+from typing import Generic, Set, Type, TypeVar
 import firebase_admin
 
 T = TypeVar("T")
@@ -12,11 +12,11 @@ class CloudEvent(Generic[T]):
   source: str
   subject: str
   type: str
-  time: datetime
+  time: Type[datetime.datetime]
   data: T
 
 
-_apps: Set[firebase_admin.App] = None
+_apps: Set[firebase_admin.App] = Set()
 
 
 def apps() -> firebase_admin.App:

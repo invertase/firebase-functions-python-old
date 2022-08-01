@@ -1,9 +1,13 @@
+"""
+Module used to serve Firebase functions locally and remotely.
+"""
+
 import asyncio
 import dataclasses
 from enum import Enum
 import sys
-from typing import Any, Callable, List
-from yaml import load, dump
+from typing import Any, Callable
+from yaml import dump
 
 from flask import Flask
 from flask import jsonify
@@ -11,7 +15,6 @@ from flask import request
 from flask import Response
 
 from firebase_functions.manifest import CallableTrigger, HttpsTrigger, ManifestEndpoint, ManifestStack
-from firebase_functions.utils import remove_undrscores
 
 __ALLOWED_METHODS = ['GET', 'POST', 'PUT', 'DELETE']
 
@@ -86,7 +89,8 @@ def wrap_functions_yaml(triggers) -> Any:
 def add_entrypoint(name, trigger) -> dict:
   """Add an entrypoint for a single function in the user's codebase."""
   endpoint = {}
-  endpoint[remove_undrscores(name)] = trigger
+  # Lowercase the name of the function and replace "_" to support CF naming.
+  endpoint[name.replace('_', '').lower()] = trigger
   return endpoint
 
 
@@ -105,7 +109,8 @@ def is_callable_trigger(endpoint: ManifestEndpoint) -> bool:
 
 
 def is_pubsub_trigger(endpoint: ManifestEndpoint) -> bool:
-  return endpoint.eventTrigger is not None and endpoint.eventTrigger.eventType == 'google.cloud.pubsub.topic.v1.messagePublished'
+  return (endpoint.eventTrigger is not None and endpoint.eventTrigger.eventType
+          == 'google.cloud.pubsub.topic.v1.messagePublished')
 
 
 def serve_triggers(triggers: dict[str, Callable]) -> Flask:
