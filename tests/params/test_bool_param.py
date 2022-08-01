@@ -41,7 +41,7 @@ def test_bool_param_value_error():
 
 def test_bool_param_empty_default():
   """
-  Testing if float param defaults to empty float if no value and no default.
+  Testing if bool param defaults to False if no value and no default.
   """
   param = params.BoolParam('bool_default_test')
   print(param.value())
@@ -50,7 +50,7 @@ def test_bool_param_empty_default():
 
 def test_bool_param_default():
   """
-  Testing if float param defaults to provided default value.
+  Testing if bool param defaults to provided default value.
   """
   param = params.BoolParam(
       'bool_default_test',
@@ -58,3 +58,9 @@ def test_bool_param_default():
       default=False,
   )
   assert param.value() == False
+  param = params.BoolParam(
+      'bool_default_test',
+      # TODO accepts any value for default, but should only accept True or False
+      default=True,
+  )
+  assert param.value() == True
