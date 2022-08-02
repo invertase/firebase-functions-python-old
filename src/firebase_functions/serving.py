@@ -1,6 +1,6 @@
-"""
+'''
 Module used to serve Firebase functions locally and remotely.
-"""
+'''
 
 import asyncio
 import dataclasses
@@ -59,7 +59,7 @@ def wrap_pubsub_trigger(trig):
 
 
 def clean_nones_and_set_default(value: dict) -> Any:
-  """Remove all `None` values from the generated manifest, and set Sentinels to None."""
+  '''Remove all `None` values from the generated manifest, and set Sentinels to None.'''
 
   result: dict = {}
 
@@ -75,7 +75,7 @@ def clean_nones_and_set_default(value: dict) -> Any:
 
 
 def wrap_functions_yaml(triggers) -> Any:
-  """Wrapper around each trigger in the user's codebase."""
+  '''Wrapper around each trigger in the user's codebase.'''
 
   def wrapper():
     trigger_data = {}
@@ -101,9 +101,9 @@ def wrap_functions_yaml(triggers) -> Any:
 
 
 def add_entrypoint(name, trigger) -> dict:
-  """Add an entrypoint for a single function in the user's codebase."""
+  '''Add an entrypoint for a single function in the user's codebase.'''
   endpoint = {}
-  # Lowercase the name of the function and replace "_" to support CF naming.
+  # Lowercase the name of the function and replace '_' to support CF naming.
   endpoint[name.replace('_', '').lower()] = trigger
   return endpoint
 
@@ -126,10 +126,10 @@ def is_pubsub_trigger(endpoint: ManifestEndpoint) -> bool:
 
 
 def serve_triggers(triggers: dict[str, Callable]) -> Flask:
-  """
+  '''
   Start serving all triggers provided by the user locally.
   Used by the generated `app` file upon deployment.
-  """
+  '''
   app = Flask(__name__)
 
   for name, trigger in triggers.items():
@@ -162,8 +162,8 @@ def quitquitquit():
 
 
 def serve_admin(triggers) -> Flask:
-  """Generate a specs `functions.yaml` file and serve it locally
-  on the path `<host>:<port>/__/functions.yaml`."""
+  '''Generate a specs `functions.yaml` file and serve it locally
+  on the path `<host>:<port>/__/functions.yaml`.'''
 
   app = Flask(__name__)
   app.add_url_rule(

@@ -1,6 +1,6 @@
-"""
+'''
 Code generator.
-"""
+'''
 import os
 import sys
 import inspect
@@ -31,11 +31,11 @@ def get_exports(file_path: str):
 
 
 def generate_http_server(module_name: str, exports: dict, file_path: str):
-  """Generate the HTTP server code."""
+  '''Generate the HTTP server code.'''
 
   triggers = ''
   for name in exports.keys():
-    triggers += f'triggers["{name}"] = _alias.{name}\n'
+    triggers += f'triggers[\'{name}\'] = _alias.{name}\n'
 
   server = f'''
 """APP SERVER"""

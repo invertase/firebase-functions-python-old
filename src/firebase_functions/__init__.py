@@ -3,7 +3,7 @@ import datetime
 from typing import Generic, Set, Type, TypeVar
 import firebase_admin
 
-T = TypeVar("T")
+T = TypeVar('T')
 
 
 @dataclass

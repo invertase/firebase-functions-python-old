@@ -1,6 +1,6 @@
-"""Module for Cloud Functions that listen to HTTPS endpoints.
+'''Module for Cloud Functions that listen to HTTPS endpoints.
 These can be raw web requests and Callable RPCs.
-"""
+'''
 
 import dataclasses
 from enum import Enum
@@ -142,7 +142,7 @@ def on_request(
     service_account: Union[None, StringParam, StringParam, Sentinel] = None,
     secrets: Union[List[StringParam], SecretParam, Sentinel, None] = None,
 ) -> Callable[[Request], None]:
-  """Decorator for a function that handles raw HTTPS requests.
+  '''Decorator for a function that handles raw HTTPS requests.
 
   Parameters:
       allowed_origins: Origins allowed to invoke this function. Affects CORS
@@ -165,7 +165,7 @@ def on_request(
       secrets:
 
   To reset an attribute to factory default, use USE_DEFAULT
-  """
+  '''
 
   # Construct an Options object out from the args passed
   # by the user, if any.

@@ -1,22 +1,22 @@
-"""
+'''
 Options unit tests.
-"""
+'''
 import firebase_functions.options as options
 
 
 def test_set_global_options():
-  """
+  '''
   Testing if setting the global options actually change the values.
-  """
+  '''
   options.set_global_options(max_instances=1)
 
   assert options.global_options.max_instances == 1
 
 
 def test_https_options():
-  """
+  '''
   Testing if setting the global options actually change the values.
-  """
+  '''
   options.set_global_options(max_instances=1)
 
   assert options.global_options.max_instances == 1
@@ -31,9 +31,9 @@ def test_https_options():
 
 
 def test_pubsub_options():
-  """
+  '''
   Testing if setting the global options actually change the values.
-  """
+  '''
   options.set_global_options(max_instances=1)
 
   assert options.global_options.max_instances == 1

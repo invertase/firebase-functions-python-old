@@ -1,4 +1,4 @@
-"""Pub/sub trigger for the function to be triggered by Pub/Sub."""
+'''Pub/sub trigger for the function to be triggered by Pub/Sub.'''
 
 import datetime as dt
 import functools
@@ -49,8 +49,8 @@ def on_message_published(
     service_account: Union[None, StringParam, str, Sentinel] = None,
     secrets: Union[None, List[StringParam], SecretParam, Sentinel] = None,
 ) -> Callable[[CloudEvent[Message[T]]], None]:
-  """
-      Decorator for functions that are triggered by Pub/Sub."""
+  '''
+      Decorator for functions that are triggered by Pub/Sub.'''
 
   # Construct an Options object out from the args passed by the user, if any.
   pubsub_options = PubSubOptions(

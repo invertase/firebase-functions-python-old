@@ -1,4 +1,4 @@
-"""Specs for the served functions.yaml of the user's functions"""
+'''Specs for the served functions.yaml of the user's functions'''
 
 # pylint: disable=invalid-name
 
@@ -57,7 +57,7 @@ ServiceAccount = str
 
 @dataclass(frozen=True)
 class ManifestEndpoint():
-  """An definition of a function as appears in the Manifest."""
+  '''An definition of a function as appears in the Manifest.'''
 
   entryPoint: str
   region: Optional[Union[StringParam, str]] = None

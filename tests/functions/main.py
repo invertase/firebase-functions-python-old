@@ -1,4 +1,4 @@
-"""SAMPLE APP"""
+'''SAMPLE APP'''
 
 from firebase_functions.log import debug
 from firebase_functions import options
