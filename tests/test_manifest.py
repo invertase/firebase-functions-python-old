@@ -9,7 +9,7 @@ import logging
 
 LOGGER = logging.getLogger(__name__)
 
-TEST_PORT = 8080
+TEST_PORT = 8082
 
 generated: dict = {}
 
