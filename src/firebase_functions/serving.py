@@ -94,14 +94,6 @@ def wrap_functions_yaml(triggers: dict) -> Any:
   return wrapper
 
 
-def add_entrypoint(name, trigger) -> dict:
-  '''Make an entrypoint for a single function in the user's codebase.'''
-  endpoint = {}
-  # Lowercase the name of the function and replace '_' to support CF naming.
-  endpoint[name.replace('_', '').lower()] = trigger
-  return endpoint
-
-
 def is_http_trigger(endpoint: ManifestEndpoint) -> bool:
   # If the function's trigger contains `httpsTrigger` attribute,
   # then it's a https function.
