@@ -81,3 +81,21 @@ def test_endpoint_name_is_clean():
   for function in generated["endpoints"].values():
     assert function["entryPoint"] == 'http_callable_function'
     break
+
+
+def test_use_default_is_null():
+  '''Test if USE_DEFAULT value will result in a null value.'''
+  for function in generated["endpoints"].values():
+    if (function["entryPoint"] == 'http_request_function'):
+      # nulls in yaml are parsed to Nones in python.
+      assert function["maxInstances"] is None
+      break
+
+
+def test_option_key_does_not_exist():
+  '''Test if option key doesn't exists if the user didn't assign it.'''
+  for function in generated["endpoints"].values():
+    if (function["entryPoint"] == 'http_call_function'):
+      with pytest.raises(KeyError):
+        assert function["maxInstances"] is int
+      break
