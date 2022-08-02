@@ -6,6 +6,8 @@ import os
 from typing import Any, Callable, Dict, Generic, List, TypeVar, Union
 from dataclasses import dataclass
 
+from flask import Request
+
 from firebase_functions import CloudEvent
 from firebase_functions.options import PubSubOptions, Sentinel, VpcOptions, Memory, IngressSettings
 from firebase_functions.manifest import EventTrigger, ManifestEndpoint
@@ -37,6 +39,7 @@ CloudEventMessage = CloudEvent[Message[T]]
 
 
 def on_message_published(
+    func: Callable[[CloudEvent], None] = None,
     *,
     topic: str,
     region: Union[None, StringParam, str] = None,
@@ -65,38 +68,42 @@ def on_message_published(
       service_account=service_account,
       secrets=secrets,
   )
-  metadata = {}
-  metadata = {} if pubsub_options is None else pubsub_options.metadata()
+
+  trigger = {} if pubsub_options is None else pubsub_options.metadata()
 
   def wrapper(func):
 
     @functools.wraps(func)
-    def pubsub_view_func(*args, **kwargs):
-      return func(*args, **kwargs)
+    def pubsub_view_func(request: Request):
+      return func()
 
-    metadata['id'] = func.__name__
     project = os.environ.get('GCLOUD_PROJECT')
 
-    endpoint = ManifestEndpoint(
-        platform='gcfv2',
+    manifest = ManifestEndpoint(
         entryPoint=func.__name__,
-        region=region,
-        labels={},
-        vpc=vpc,
-        availableMemoryMb=memory,
-        maxInstances=max_instances,
-        minInstances=min_instances,
         eventTrigger=EventTrigger(
             eventType='google.cloud.pubsub.topic.v1.messagePublished',
             eventFilters={
                 'topic': f'projects/{project}/topics/{topic}',
             },
         ),
+        region=pubsub_options.region,
+        availableMemoryMb=pubsub_options.memory,
+        timeoutSeconds=pubsub_options.timeout_sec,
+        minInstances=pubsub_options.min_instances,
+        maxInstances=pubsub_options.max_instances,
+        vpc=pubsub_options.vpc,
+        ingressSettings=pubsub_options.ingress,
+        serviceAccount=pubsub_options.service_account,
+        secretEnvironmentVariables=pubsub_options.secrets,
     )
 
-    pubsub_view_func.__firebase_metadata__ = metadata
-    pubsub_view_func.__firebase_endpoint__ = endpoint
+    pubsub_view_func.__firebase_trigger__ = trigger
+    pubsub_view_func.__firebase_endpoint__ = manifest
 
     return pubsub_view_func
+
+  if func is None:
+    return wrapper
 
   return wrapper
