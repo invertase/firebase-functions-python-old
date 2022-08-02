@@ -1,3 +1,5 @@
+import asyncio
+import time
 import yaml
 import pytest
 
@@ -39,6 +41,8 @@ def codegen_fixture():
       ],
       cwd='tests/functions/',
   )
+
+  time.sleep(2)
 
   # Parse and store the result in memory for tests.
   read_functions_yaml()
