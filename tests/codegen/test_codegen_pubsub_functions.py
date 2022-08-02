@@ -58,18 +58,15 @@ def test_on_message_published_function_endpoint_has_all_options():
   assert endpoint.region == 'europe-west2'
   assert endpoint.availableMemoryMb == 512
   assert endpoint.timeoutSeconds == 123
-  # TODO minInstances always comes through as None
-  # assert endpoint.minInstances == 6
+  assert endpoint.minInstances == 6
   assert endpoint.maxInstances == 12
   vpc = endpoint.vpc
   assert isinstance(vpc, options.VpcOptions)
   assert vpc.connector == 'id'
-  # TODO should this be camel case like other options?
   assert vpc.egress_settings == options.VpcEgressSettings.PRIVATE_RANGES_ONLY
   assert endpoint.ingressSettings == options.IngressSettings.ALLOW_INTERNAL_ONLY
   assert endpoint.serviceAccount == 'some-service-account'
-  # TODO manifest missing secrets option
-  # assert endpoint.secrets == ['secret-1', 'secret-2']
+  assert endpoint.secretEnvironmentVariables == ['secret-1', 'secret-2']
   assert endpoint.eventTrigger is not None
   assert endpoint.callableTrigger is None
   assert endpoint.httpsTrigger is None

@@ -146,16 +146,16 @@ class HttpsOptions(GlobalOptions):
       allow_invalid_app_check_token=None,
   ):
     self.max_instances = max_instances or global_options.max_instances
-    self.allowed_methods = allowed_methods or min_instances or self.allowed_methods or global_options.allowed_methods
-    self.allowed_origins = allowed_origins or self.allowed_origins or global_options.allowed_origins
-    self.ingress = ingress or self.ingress or global_options.ingress
-    self.region = region or self.region or global_options.region
-    self.memory = memory or self.memory or global_options.memory
-    self.timeout_sec = timeout_sec or self.timeout_sec or global_options.timeout_sec
-    self.min_instances = self.min_instances or global_options.min_instances
-    self.vpc = vpc or self.vpc or global_options.vpc
-    self.service_account = service_account or self.service_account or global_options.service_account
-    self.secrets = secrets or self.secrets or global_options.secrets
+    self.allowed_methods = allowed_methods or global_options.allowed_methods
+    self.allowed_origins = allowed_origins or global_options.allowed_origins
+    self.ingress = ingress or global_options.ingress
+    self.region = region or global_options.region
+    self.memory = memory or global_options.memory
+    self.timeout_sec = timeout_sec or global_options.timeout_sec
+    self.min_instances = min_instances or global_options.min_instances
+    self.vpc = vpc or global_options.vpc
+    self.service_account = service_account or global_options.service_account
+    self.secrets = secrets or global_options.secrets
     self.allow_invalid_app_check_token = allow_invalid_app_check_token
 
 
@@ -196,31 +196,18 @@ class PubSubOptions(GlobalOptions):
       secrets=None,
       topic=None,
   ):
-    self.max_instances = max_instances or self.max_instances or global_options.max_instances
-    self.allowed_methods = allowed_methods or min_instances or self.allowed_methods or global_options.allowed_methods
-    self.allowed_origins = allowed_origins or self.allowed_origins or global_options.allowed_origins
-    self.ingress = ingress or self.ingress or global_options.ingress
-    self.region = region or self.region or global_options.region
-    self.memory = memory or self.memory or global_options.memory
-    self.timeout_sec = timeout_sec or self.timeout_sec or global_options.timeout_sec
-    self.min_instances = self.min_instances or global_options.min_instances
-    self.vpc = vpc or self.vpc or global_options.vpc
-    self.service_account = service_account or self.service_account or global_options.service_account
-    self.secrets = secrets or self.secrets or global_options.secrets
+    self.max_instances = max_instances or global_options.max_instances
+    self.allowed_methods = allowed_methods or global_options.allowed_methods
+    self.allowed_origins = allowed_origins or global_options.allowed_origins
+    self.ingress = ingress or global_options.ingress
+    self.region = region or global_options.region
+    self.memory = memory or global_options.memory
+    self.timeout_sec = timeout_sec or global_options.timeout_sec
+    self.min_instances = min_instances or global_options.min_instances
+    self.vpc = vpc or global_options.vpc
+    self.service_account = service_account or global_options.service_account
+    self.secrets = secrets or global_options.secrets
     self.topic = topic
-
-  def metadata(self):
-    project = os.environ.get('GCLOUD_PROJECT')
-    return {
-        'topic': self.topic,
-        'trigger': {
-            'eventType': 'google.cloud.pubsub.topic.v1.messagePublished',
-            'eventFilters': {
-                'resource': f'projects/{project}/topics/{self.topic}',
-            }
-        },
-        **super().metadata()
-    }
 
 
 def set_global_options(
