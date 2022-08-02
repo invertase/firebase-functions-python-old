@@ -11,7 +11,7 @@ import logging
 
 LOGGER = logging.getLogger(__name__)
 
-TEST_PORT = 8082
+TEST_PORT = 8080
 
 generated: dict = {}
 
@@ -42,15 +42,19 @@ def codegen_fixture():
       cwd='tests/functions/',
   )
 
-  time.sleep(2)
+  # A little delay to ensure the localserver has started.
+  time.sleep(5)
 
   # Parse and store the result in memory for tests.
   read_functions_yaml()
 
-  yield
-
   # Cleanup by quitting the admin server.
-  request.urlopen(f"http://localhost:{TEST_PORT}/__/quitquitquit")
+  Popen(
+      ['pkill', '-f', 'gunicorn'],
+      cwd='tests/functions/',
+  ).wait()
+
+  yield
 
 
 def test_manifest_spec_version():
