@@ -5,8 +5,6 @@ Module used to serve Firebase functions locally and remotely.
 import asyncio
 import dataclasses
 import sys
-import asyncio
-import dataclasses
 
 from enum import Enum
 from typing import Any, Callable
@@ -74,25 +72,21 @@ def clean_nones_and_set_default(value: dict) -> Any:
   return result
 
 
-def wrap_functions_yaml(triggers) -> Any:
+def wrap_functions_yaml(triggers: dict) -> Any:
   '''Wrapper around each trigger in the user's codebase.'''
 
   def wrapper():
-    trigger_data = {}
-
-    for name, trig in triggers.items():
-      endpoint = add_entrypoint(
-          name,
-          dataclasses.asdict(
-              trig.__firebase_endpoint__,
-              dict_factory=asdict_factory,
-          ),
+    endpoints = {}
+    for name, trigger in triggers.items():
+      # Lowercase the name of the function and replace '_' to support CF naming.
+      endpoints[name.replace('_', '').lower()] = dataclasses.asdict(
+          trigger.__firebase_endpoint__,
+          dict_factory=asdict_factory,
       )
-      trigger_data.update(endpoint)
 
-    result = Manifest(endpoints=trigger_data)
+    manifest = Manifest(endpoints=endpoints)
     response = dump(dataclasses.asdict(
-        result,
+        manifest,
         dict_factory=asdict_factory,
     ))
     return Response(response, mimetype='text/yaml')
@@ -101,7 +95,7 @@ def wrap_functions_yaml(triggers) -> Any:
 
 
 def add_entrypoint(name, trigger) -> dict:
-  '''Add an entrypoint for a single function in the user's codebase.'''
+  '''Make an entrypoint for a single function in the user's codebase.'''
   endpoint = {}
   # Lowercase the name of the function and replace '_' to support CF naming.
   endpoint[name.replace('_', '').lower()] = trigger
@@ -111,13 +105,15 @@ def add_entrypoint(name, trigger) -> dict:
 def is_http_trigger(endpoint: ManifestEndpoint) -> bool:
   # If the function's trigger contains `httpsTrigger` attribute,
   # then it's a https function.
-  return endpoint.httpsTrigger is not None or endpoint.httpsTrigger is HttpsTrigger
+  return (endpoint.httpsTrigger is not None or
+          endpoint.httpsTrigger is HttpsTrigger)
 
 
 def is_callable_trigger(endpoint: ManifestEndpoint) -> bool:
   # If the function's trigger contains `httpsTrigger` attribute,
   # then it's a https function.
-  return endpoint.callableTrigger is not None or endpoint.callableTrigger is CallableTrigger
+  return (endpoint.callableTrigger is not None or
+          endpoint.callableTrigger is CallableTrigger)
 
 
 def is_pubsub_trigger(endpoint: ManifestEndpoint) -> bool:
