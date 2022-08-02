@@ -1,14 +1,14 @@
 """Testing pub/sub functions are annotated with Firebase trigger metadata."""
 
 import os
-from sys import stdout
 import pytest
 from firebase_functions import options
 from firebase_functions import codegen
 from firebase_functions.pubsub import on_message_published
 from firebase_functions.manifest import ManifestEndpoint
 
-os.environ['GCLOUD_PROJECT'] = "test-project"
+# Environment variable used for pubsub topic name.
+os.environ['GCLOUD_PROJECT'] = 'test-project'
 
 
 @on_message_published(
