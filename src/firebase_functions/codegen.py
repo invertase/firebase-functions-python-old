@@ -8,7 +8,8 @@ import inspect
 from importlib import util
 
 
-def get_module_name(file_path: str):
+def get_module_name(file_path: str) -> str:
+  '''Get the module name from the file path.'''
   basename = os.path.basename(file_path)
   return os.path.splitext(basename)[0]
 
@@ -60,15 +61,15 @@ admin = serving.serve_admin(triggers)
     f.write(server)
 
 
-def main(*args):
-  _file_path = args[0]
-  _exports = get_exports(_file_path)
-  if not _exports:
+def main(args_: list):
+  file_path = args_[0]
+  exports = get_exports(file_path)
+  if not exports:
     print('No exports in module')
     sys.exit(1)
 
-  mod_name = get_module_name(_file_path)
-  generate_http_server(mod_name, _exports, _file_path)
+  mod_name = get_module_name(file_path)
+  generate_http_server(mod_name, exports, file_path)
 
 
 if __name__ == '__main__':

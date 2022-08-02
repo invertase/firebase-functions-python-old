@@ -3,10 +3,11 @@
 import datetime as dt
 import functools
 import os
-from typing import Any, Callable, Dict, Generic, List, TypeVar, Union
-from dataclasses import dataclass
 
-from flask import Request
+from dataclasses import dataclass
+from typing import Any, Callable, Dict, Generic, List, TypeVar, Union
+
+import flask
 
 from firebase_functions import CloudEvent
 from firebase_functions.options import PubSubOptions, Sentinel, VpcOptions, Memory, IngressSettings
@@ -14,6 +15,9 @@ from firebase_functions.manifest import EventTrigger, ManifestEndpoint
 from firebase_functions.params import SecretParam, StringParam, IntParam
 
 T = TypeVar('T')
+
+Request = flask.Request
+Response = flask.Response
 
 
 @dataclass(frozen=True)
@@ -36,6 +40,14 @@ class Message(Generic[T]):
 
 
 CloudEventMessage = CloudEvent[Message[T]]
+
+
+def pubsub_wrap_handler(
+    func: Callable[[CloudEvent], None],
+    request: Request,
+    options: PubSubOptions,
+):
+  pass
 
 
 def on_message_published(
@@ -75,7 +87,12 @@ def on_message_published(
 
     @functools.wraps(func)
     def pubsub_view_func(request: Request):
-      return func()
+
+      return pubsub_wrap_handler(
+          func=func,
+          request=request,
+          options=pubsub_options,
+      )
 
     project = os.environ.get('GCLOUD_PROJECT')
 
