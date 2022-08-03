@@ -41,7 +41,6 @@ def httpcallablefunction(req: CallableRequest):
 
 
 # Sample of a Pub/Sub event CF.
-# FIXME region should a list in yaml
 @on_message_published(
     topic='uid',
     memory=options.Memory.MB_256,

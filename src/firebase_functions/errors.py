@@ -1,4 +1,6 @@
-''' Errors and exceptions in this package. '''
+'''
+Https errors and error mapping.
+'''
 
 from enum import Enum
 from typing import Any, Optional, TypedDict

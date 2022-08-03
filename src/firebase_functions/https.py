@@ -1,29 +1,47 @@
-'''Module for Cloud Functions that listen to HTTPS endpoints.
+'''
+Module for Cloud Functions that listen to HTTPS endpoints.
 These can be raw web requests and Callable RPCs.
 '''
 
 import dataclasses
-from enum import Enum
 import functools
 import json
 import re
 import flask
-from typing import (Any, Generic, List, TypeVar, Union, Optional)
+
+from enum import Enum
 from dataclasses import dataclass
 from collections.abc import Callable
 from firebase_admin import auth
+from typing import (
+    Any,
+    Generic,
+    List,
+    TypeVar,
+    Union,
+    Optional,
+)
 
 from firebase_functions import apps
 from firebase_functions.log import (error, info, warn)
-from firebase_functions.errors import FunctionsErrorCode, HttpsError
-from firebase_functions.manifest import CallableTrigger, HttpsTrigger, ManifestEndpoint
+from firebase_functions.errors import (FunctionsErrorCode, HttpsError)
+from firebase_functions.manifest import (
+    CallableTrigger,
+    HttpsTrigger,
+    ManifestEndpoint,
+)
 from firebase_functions.params import (
     SecretParam,
     StringParam,
     IntParam,
 )
-from firebase_functions.options import (HttpsOptions, Memory, VpcOptions,
-                                        IngressSettings, Sentinel)
+from firebase_functions.options import (
+    HttpsOptions,
+    Memory,
+    VpcOptions,
+    IngressSettings,
+    Sentinel,
+)
 
 Request = flask.Request
 Response = flask.Response
