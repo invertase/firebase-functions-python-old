@@ -88,7 +88,7 @@ class RequiredAPi(TypedDict):
 
 @dataclass(frozen=True)
 class Manifest():
+  endpoints: dict[str, ManifestEndpoint]
   specVersion: str = 'v1alpha1'
   requiredApis: Optional[list[RequiredAPi]] = None
   params: Optional[list[str]] = None
-  endpoints: Optional[dict[str, ManifestEndpoint]] = None

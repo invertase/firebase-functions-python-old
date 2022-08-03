@@ -118,7 +118,7 @@ class HttpsError(Exception):
   def to_dict(self):
     if self.details is None:
       return HttpErrorWireFormat(
-          status=self.code.canonical_name.value,
+          status=self.http_error_code.canonical_name.value,
           message=self.message,
       )
 

@@ -57,7 +57,8 @@ def wrap_pubsub_trigger(trig):
 
 
 def clean_nones_and_set_default(value: dict) -> Any:
-  '''Remove all `None` values from the generated manifest, and set Sentinels to None.'''
+  '''Remove all `None` values from the generated manifest,
+  and set Sentinels to None.'''
 
   result: dict = {}
 
@@ -72,7 +73,7 @@ def clean_nones_and_set_default(value: dict) -> Any:
   return result
 
 
-def wrap_functions_yaml(triggers: dict) -> Any:
+def wrap_functions_yaml(triggers: dict) -> Callable[..., Response]:
   '''Wrapper around each trigger in the user's codebase.'''
 
   def wrapper():
@@ -84,26 +85,35 @@ def wrap_functions_yaml(triggers: dict) -> Any:
           dict_factory=asdict_factory,
       )
 
-    manifest = Manifest(endpoints=endpoints)
-    response = dump(dataclasses.asdict(
-        manifest,
+      # TODO we might not need this anymore since we're already
+      # manufactoring to a dict on line 91-94
+
+      # dataclasses.asdict(
+      #     trigger.__firebase_endpoint__,
+      #     dict_factory=asdict_factory,
+      # )
+
+    manifest_as_dict = dataclasses.asdict(
+        Manifest(endpoints=endpoints),
         dict_factory=asdict_factory,
-    ))
+    )
+
+    response = dump(manifest_as_dict)
     return Response(response, mimetype='text/yaml')
 
   return wrapper
 
 
 def is_http_trigger(endpoint: ManifestEndpoint) -> bool:
-  # If the function's trigger contains `httpsTrigger` attribute,
-  # then it's a https function.
+  ''' If the function's trigger contains `httpsTrigger` attribute,
+  then it's a https function. '''
   return (endpoint.httpsTrigger is not None or
           endpoint.httpsTrigger is HttpsTrigger)
 
 
 def is_callable_trigger(endpoint: ManifestEndpoint) -> bool:
-  # If the function's trigger contains `httpsTrigger` attribute,
-  # then it's a https function.
+  ''' If the function's trigger contains `httpsTrigger` attribute,
+  then it's a https function. '''
   return (endpoint.callableTrigger is not None or
           endpoint.callableTrigger is CallableTrigger)
 
