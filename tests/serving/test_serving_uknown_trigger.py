@@ -1,4 +1,3 @@
-import functools
 import json
 
 import pytest
@@ -9,15 +8,9 @@ from firebase_functions.serving import serve_admin, serve_triggers
 
 def uknown_trigger(func):
 
-  @functools.wraps(func)
-  def view_func():
-    return 'Hello World!'
+  func.__firebase_endpoint__ = ManifestEndpoint(entryPoint=func.__name__)
 
-  view_func.__firebase_endpoint__ = ManifestEndpoint(
-      entryPoint=view_func.__name__)
-  view_func.__firebase_trigger__ = {}
-
-  return view_func
+  return func
 
 
 @uknown_trigger
