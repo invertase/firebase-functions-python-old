@@ -16,7 +16,7 @@ class CloudEvent(Generic[T]):
   source: str
   subject: str
   type: str
-  time: Type[datetime.datetime]
+  time: datetime.datetime
   data: T
 
 

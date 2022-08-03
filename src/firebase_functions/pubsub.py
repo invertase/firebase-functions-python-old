@@ -3,11 +3,10 @@
 import datetime as dt
 import functools
 import os
+import flask
 
 from dataclasses import dataclass
-from typing import Any, Callable, Dict, Generic, List, TypeVar, Union
-
-import flask
+from typing import Any, Callable, Dict, Generic, List, TypeVar, TypedDict, Union
 
 from firebase_functions import CloudEvent
 from firebase_functions.options import PubSubOptions, Sentinel, VpcOptions, Memory, IngressSettings
@@ -42,12 +41,21 @@ class Message(Generic[T]):
 CloudEventMessage = CloudEvent[Message[T]]
 
 
+class MessagePublishedData(TypedDict):
+  message: object
+  subscription: str
+
+
 def pubsub_wrap_handler(
-    func: Callable[[CloudEvent], None],
-    request: Request,
+    func: Callable[[CloudEventMessage], None],
+    raw: CloudEvent[Any],
     options: PubSubOptions,
-):
-  pass
+) -> Response:
+  message_published_data: CloudEvent[Message[Any]] = raw
+
+  result = func(message_published_data)
+  response = flask.jsonify(data=result, status=200)
+  return response
 
 
 def on_message_published(
@@ -63,7 +71,7 @@ def on_message_published(
     ingress: Union[None, IngressSettings, Sentinel] = None,
     service_account: Union[None, StringParam, str, Sentinel] = None,
     secrets: Union[None, List[StringParam], SecretParam, Sentinel] = None,
-) -> Callable[[CloudEvent[Message[T]]], None]:
+) -> Callable[[CloudEvent], None]:
   '''
       Decorator for functions that are triggered by Pub/Sub.'''
 
@@ -86,11 +94,10 @@ def on_message_published(
   def wrapper(func):
 
     @functools.wraps(func)
-    def pubsub_view_func(request: Request):
-
+    def pubsub_view_func(data: CloudEvent[Any]):
       return pubsub_wrap_handler(
           func=func,
-          request=request,
+          raw=data,
           options=pubsub_options,
       )
 
@@ -123,4 +130,4 @@ def on_message_published(
   if func is None:
     return wrapper
 
-  return wrapper
+  return wrapper(func)

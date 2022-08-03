@@ -21,19 +21,6 @@ from firebase_functions.options import Sentinel
 __ALLOWED_METHODS = ['GET', 'POST', 'PUT', 'DELETE']
 
 
-def asdict_factory(data) -> dict:
-
-  def convert_value(obj):
-    if isinstance(obj, Enum):
-      return obj.value
-    elif isinstance(obj, Sentinel):
-      return None
-
-    return obj
-
-  return dict((k, convert_value(v)) for k, v in data if v is not None)
-
-
 def wrap_http_trigger(trig: Callable) -> Callable:
 
   def wrapper():
@@ -50,27 +37,28 @@ def wrap_pubsub_trigger(trig):
 
   def wrapper():
     data = request.get_json(force=True)
-    trig(data, {})
+    trig(data)
     return jsonify({})
 
   return wrapper
 
 
-def clean_nones_and_set_default(value: dict) -> Any:
-  '''Remove all `None` values from the generated manifest,
-  and set Sentinels to None.'''
+def clean_nones_and_set_defult(data) -> dict:
 
-  result: dict = {}
+  def convert_value(obj):
+    if isinstance(obj, Enum):
+      return obj.value
+    elif isinstance(obj, Sentinel):
+      return None
 
-  for k, v in value.items():
-    if v is Sentinel:
-      result[k] = None
-    elif v is None:
-      continue
-    else:
-      result[k] = value
+    return obj
 
-  return result
+  return dict((k, convert_value(v)) for k, v in data if v is not None)
+
+
+def is_valid_trigger(trigger: ManifestEndpoint) -> bool:
+  return is_http_trigger(trigger) or is_callable_trigger(
+      trigger) or is_pubsub_trigger(trigger)
 
 
 def triggers_as_yaml(triggers: dict) -> str:
@@ -78,14 +66,20 @@ def triggers_as_yaml(triggers: dict) -> str:
 
   endpoints: dict[str, ManifestEndpoint] = {}
 
-  for name, trigger in triggers.items():
-    # Lowercase the name of the function and replace '_' to support CF naming.
-    endpoints[name.replace('_', '').lower()] = trigger.__firebase_endpoint__
+  for name, trig in triggers.items():
+
+    trigger = trig.__firebase_endpoint__
+
+    if not is_valid_trigger(trigger):
+      continue
+    else:
+      # Lowercase the name of the function and replace '_' to support CF naming.
+      endpoints[name.replace('_', '').lower()] = trigger
 
   manifest_yaml = dump(
       dataclasses.asdict(
           Manifest(endpoints=endpoints),
-          dict_factory=asdict_factory,
+          dict_factory=clean_nones_and_set_defult,
       ))
 
   return manifest_yaml
