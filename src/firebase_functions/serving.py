@@ -73,33 +73,30 @@ def clean_nones_and_set_default(value: dict) -> Any:
   return result
 
 
-def wrap_functions_yaml(triggers: dict) -> Callable[..., Response]:
+def triggers_as_yaml(triggers: dict) -> str:
+  '''Convert a list of triggers to a YAML string.'''
+
+  endpoints: dict[str, ManifestEndpoint] = {}
+
+  for name, trigger in triggers.items():
+    # Lowercase the name of the function and replace '_' to support CF naming.
+    endpoints[name.replace('_', '').lower()] = trigger.__firebase_endpoint__
+
+  manifest_yaml = dump(
+      dataclasses.asdict(
+          Manifest(endpoints=endpoints),
+          dict_factory=asdict_factory,
+      ))
+
+  return manifest_yaml
+
+
+def wrap_functions_yaml(triggers: dict) -> Any:
   '''Wrapper around each trigger in the user's codebase.'''
 
-  def wrapper():
-    endpoints = {}
-    for name, trigger in triggers.items():
-      # Lowercase the name of the function and replace '_' to support CF naming.
-      endpoints[name.replace('_', '').lower()] = dataclasses.asdict(
-          trigger.__firebase_endpoint__,
-          dict_factory=asdict_factory,
-      )
-
-      # TODO we might not need this anymore since we're already
-      # manufactoring to a dict on line 91-94
-
-      # dataclasses.asdict(
-      #     trigger.__firebase_endpoint__,
-      #     dict_factory=asdict_factory,
-      # )
-
-    manifest_as_dict = dataclasses.asdict(
-        Manifest(endpoints=endpoints),
-        dict_factory=asdict_factory,
-    )
-
-    response = dump(manifest_as_dict)
-    return Response(response, mimetype='text/yaml')
+  def wrapper() -> Response:
+    triggers_yaml = triggers_as_yaml(triggers)
+    return Response(triggers_yaml, mimetype='text/yaml')
 
   return wrapper
 
