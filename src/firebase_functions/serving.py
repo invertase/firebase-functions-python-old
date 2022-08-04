@@ -211,9 +211,10 @@ def serve_admin(triggers) -> Flask:
 
 def main():
   triggers = get_triggers()
-  serve_triggers(triggers)
-  # TODO check if local env exists
-  serve_admin(triggers)
+  if os.environ['ADMIN_PORT'] is not None:
+    serve_admin(triggers).run(port=int(os.environ['ADMIN_PORT']))
+  if os.environ['PORT'] is not None:
+    serve_triggers(triggers).run(port=int(os.environ['PORT']))
 
 
 if __name__ == '__main__':
