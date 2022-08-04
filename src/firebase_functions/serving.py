@@ -32,16 +32,18 @@ def get_module_name(file_path: str) -> str:
 
 
 def get_triggers():
-  spec = util.spec_from_file_location('main.py')
-  print(spec)
+  spec = util.spec_from_file_location('main', 'main.py')
   if spec is not None and spec.loader is not None:
     module = util.module_from_spec(spec)
     spec.loader.exec_module(module)
+  else:
+    # TODO: raise friendly error
+    raise Exception('Could not find main.py')
   funcs = inspect.getmembers(module, inspect.isfunction)
   triggers = {}
   for entry in funcs:
     if hasattr(entry[1], '__firebase_trigger__'):
-      name = entry[1].__firebase_endpoint__['entryPoint']
+      name = entry[1].__firebase_endpoint__.entryPoint
       triggers[name] = entry[1]
   return triggers
 
@@ -187,6 +189,8 @@ def serve_triggers(triggers: dict[str, Callable]) -> Flask:
 
 
 def quitquitquit():
+  loop = asyncio.new_event_loop()
+  asyncio.set_event_loop(loop)
   asyncio.get_event_loop().call_later(1, sys.exit)
   return Response(status=200)
 
