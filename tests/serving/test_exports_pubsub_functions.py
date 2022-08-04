@@ -3,7 +3,7 @@
 import os
 import pytest
 from firebase_functions import options
-from firebase_functions import codegen
+from firebase_functions import serving
 from firebase_functions.pubsub import on_message_published
 from firebase_functions.manifest import ManifestEndpoint
 
@@ -101,7 +101,7 @@ def test_on_message_published_function_trigger_metadata():
 
 def test_on_message_published_function_trigger_exports():
   """Test on_message_published functions are detected in codegen exports."""
-  exports = codegen.get_exports(__file__)
+  exports = serving.get_exports(__file__)
   assert 'on_message_published_function' in exports
   export = exports['on_message_published_function']
   assert export['memory'] == options.Memory.MB_512

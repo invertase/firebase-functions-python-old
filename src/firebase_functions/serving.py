@@ -5,6 +5,10 @@ Module used to serve Firebase functions locally and remotely.
 import asyncio
 import dataclasses
 import sys
+import os
+import inspect
+
+from importlib import util
 
 from enum import Enum
 from typing import Any, Callable
@@ -19,6 +23,45 @@ from firebase_functions.manifest import CallableTrigger, HttpsTrigger, ManifestE
 from firebase_functions.options import Sentinel
 
 __ALLOWED_METHODS = ['GET', 'POST', 'PUT', 'DELETE']
+
+
+def get_module_name(file_path: str) -> str:
+  '''Get the module name from the file path.'''
+  basename = os.path.basename(file_path)
+  return os.path.splitext(basename)[0]
+
+
+def get_triggers():
+  spec = util.spec_from_file_location('main', 'main.py')
+  if spec is not None and spec.loader is not None:
+    module = util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+  else:
+    # TODO: raise friendly error
+    raise Exception('Could not find main.py')
+  funcs = inspect.getmembers(module, inspect.isfunction)
+  triggers = {}
+  for entry in funcs:
+    if hasattr(entry[1], '__firebase_trigger__'):
+      name = entry[1].__firebase_endpoint__.entryPoint
+      triggers[name] = entry[1]
+  return triggers
+
+
+def get_exports(file_path: str):
+  modname = get_module_name(file_path)
+  spec = util.spec_from_file_location(modname, file_path)
+  if spec is not None and spec.loader is not None:
+    module = util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+  funcs = inspect.getmembers(module, inspect.isfunction)
+  exports = {}
+  for func in funcs:
+    if hasattr(func[1], '__firebase_trigger__'):
+      exports[func[0]] = getattr(func[1], '__firebase_trigger__')
+
+  return exports
 
 
 def wrap_http_trigger(trig: Callable) -> Callable:
@@ -146,6 +189,8 @@ def serve_triggers(triggers: dict[str, Callable]) -> Flask:
 
 
 def quitquitquit():
+  loop = asyncio.new_event_loop()
+  asyncio.set_event_loop(loop)
   asyncio.get_event_loop().call_later(1, sys.exit)
   return Response(status=200)
 
@@ -168,3 +213,15 @@ def serve_admin(triggers) -> Flask:
   )
 
   return app
+
+
+def main():
+  triggers = get_triggers()
+  if os.environ['ADMIN_PORT'] is not None:
+    serve_admin(triggers).run(port=int(os.environ['ADMIN_PORT']))
+  if os.environ['PORT'] is not None:
+    serve_triggers(triggers).run(port=int(os.environ['PORT']))
+
+
+if __name__ == '__main__':
+  main()
