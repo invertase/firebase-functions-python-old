@@ -1,7 +1,7 @@
 """Testing https functions are annotated with Firebase trigger metadata."""
 import pytest
 from firebase_functions import options
-from firebase_functions import codegen
+from firebase_functions import serving
 from firebase_functions.https import on_call, on_request
 from firebase_functions.manifest import ManifestEndpoint
 
@@ -63,7 +63,8 @@ def test_https_on_call_function_endpoint():
   assert isinstance(vpc, options.VpcOptions)
   assert vpc.connector == 'id'
   assert vpc.egress_settings == options.VpcEgressSettings.ALL_TRAFFIC
-  assert endpoint.ingressSettings == options.IngressSettings.ALLOW_INTERNAL_AND_GCLB
+  assert (endpoint.ingressSettings ==
+          options.IngressSettings.ALLOW_INTERNAL_AND_GCLB)
   assert endpoint.serviceAccount == 'some-service-account'
   assert endpoint.secretEnvironmentVariables == ['secret-1', 'secret-2']
   assert endpoint.callableTrigger is not None
@@ -80,8 +81,8 @@ def test_https_on_call_function_trigger_metadata():
 
 
 def test_https_on_call_function_trigger_exports():
-  """Test https_on_call functions are detected in codegen exports."""
-  exports = codegen.get_exports(__file__)
+  """Test https_on_call functions are detected in exports."""
+  exports = serving.get_exports(__file__)
   assert 'https_on_call_function' in exports
   export = exports['https_on_call_function']
   assert export['memory'] == options.Memory.MB_256
@@ -109,8 +110,8 @@ def test_https_on_request_function_trigger_metadata():
 
 
 def test_https_on_request_function_trigger_exports():
-  """Test https_on_request functions are detected in codegen exports."""
-  exports = codegen.get_exports(__file__)
+  """Test https_on_request functions are detected in exports."""
+  exports = serving.get_exports(__file__)
   assert 'https_on_request_function' in exports
   export = exports['https_on_request_function']
   assert export['memory'] == options.Memory.MB_512
