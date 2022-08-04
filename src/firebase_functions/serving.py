@@ -22,7 +22,8 @@ from flask import Response
 from firebase_functions.manifest import CallableTrigger, HttpsTrigger, ManifestEndpoint, Manifest
 from firebase_functions.options import Sentinel
 
-__ALLOWED_METHODS = ['GET', 'POST', 'PUT', 'DELETE']
+__ALLOWED_METHODS_CALL = ['POST']
+__ALLOWED_METHODS_REQUEST = ['GET', 'POST', 'PUT', 'DELETE']
 
 
 def get_module_name(file_path: str) -> str:
@@ -168,12 +169,19 @@ def serve_triggers(triggers: dict[str, Callable]) -> Flask:
 
     endpoint = getattr(trigger, '__firebase_endpoint__')
 
-    if is_http_trigger(endpoint) or is_callable_trigger(endpoint):
+    if is_http_trigger(endpoint):
       app.add_url_rule(
           f'/{name}',
           endpoint=name,
           view_func=wrap_http_trigger(trigger),
-          methods=__ALLOWED_METHODS,
+          methods=__ALLOWED_METHODS_REQUEST,
+      )
+    elif is_callable_trigger(endpoint):
+      app.add_url_rule(
+          f'/{name}',
+          endpoint=name,
+          view_func=wrap_http_trigger(trigger),
+          methods=__ALLOWED_METHODS_CALL,
       )
     elif is_pubsub_trigger(endpoint):
       app.add_url_rule(
