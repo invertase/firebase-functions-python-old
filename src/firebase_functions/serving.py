@@ -33,14 +33,16 @@ def get_module_name(file_path: str) -> str:
 
 def get_triggers():
   spec = util.spec_from_file_location('main.py')
+  print(spec)
   if spec is not None and spec.loader is not None:
     module = util.module_from_spec(spec)
     spec.loader.exec_module(module)
   funcs = inspect.getmembers(module, inspect.isfunction)
   triggers = {}
-  for func in funcs:
-    if hasattr(func[1], '__firebase_trigger__'):
-      triggers[func[0].__firebase_endpoint__['entryPoint']] = func[0]
+  for entry in funcs:
+    if hasattr(entry[1], '__firebase_trigger__'):
+      name = entry[1].__firebase_endpoint__['entryPoint']
+      triggers[name] = entry[1]
   return triggers
 
 
