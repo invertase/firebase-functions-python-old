@@ -8,7 +8,6 @@ import flask
 from dataclasses import dataclass
 from typing import Any, Callable, Dict, Generic, List, TypeVar, TypedDict, Union
 
-from firebase_functions import CloudEvent
 from firebase_functions.options import PubSubOptions, Sentinel, VpcOptions, Memory, IngressSettings
 from firebase_functions.manifest import EventTrigger, ManifestEndpoint
 from firebase_functions.params import SecretParam, StringParam, IntParam
@@ -17,6 +16,16 @@ T = TypeVar('T')
 
 Request = flask.Request
 Response = flask.Response
+
+
+@dataclass(frozen=True)
+class CloudEvent(Generic[T]):
+  specversion: str
+  source: str
+  subject: str
+  type: str
+  time: dt.datetime
+  data: T
 
 
 @dataclass(frozen=True)
@@ -48,13 +57,19 @@ class MessagePublishedData(TypedDict):
 
 def pubsub_wrap_handler(
     func: Callable[[CloudEventMessage], None],
-    raw: CloudEvent[Any],
-    # options: PubSubOptions,
+    raw: dict[str, Any],
 ) -> Response:
-  message_published_data: CloudEvent[Message[Any]] = raw
+  event: CloudEventMessage = CloudEvent(
+      **raw['attributes'],
+      time=dt.datetime.fromisoformat(raw['attributes']['time']),
+      data=Message(
+          **raw['attributes']['data']['message'],
+          publish_time=dt.datetime.fromisoformat(
+              raw['attributes']['data']['message']['publish_time']),
+      ))
 
-  result = func(message_published_data)
-  response = flask.jsonify(data=result, status=200)
+  func(event)
+  response = flask.jsonify(status=200)
   return response
 
 
@@ -94,12 +109,10 @@ def on_message_published(
   def wrapper(func):
 
     @functools.wraps(func)
-    def pubsub_view_func(data: CloudEvent[Any]):
-      # TODO this is not tested in a real deployment.
+    def pubsub_view_func(data: dict[str, Any]):
       return pubsub_wrap_handler(
           func=func,
           raw=data,
-          # options=pubsub_options,
       )
 
     project = os.environ.get('GCLOUD_PROJECT')
