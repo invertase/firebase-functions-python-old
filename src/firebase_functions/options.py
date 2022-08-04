@@ -145,6 +145,7 @@ class HttpsOptions(GlobalOptions):
       secrets=None,
       allow_invalid_app_check_token=None,
   ):
+    super().__init__()
     self.max_instances = max_instances or global_options.max_instances
     self.allowed_methods = allowed_methods or global_options.allowed_methods
     self.allowed_origins = allowed_origins or global_options.allowed_origins
@@ -157,8 +158,6 @@ class HttpsOptions(GlobalOptions):
     self.service_account = service_account or global_options.service_account
     self.secrets = secrets or global_options.secrets
     self.allow_invalid_app_check_token = allow_invalid_app_check_token
-
-    super().__init__()
 
 
 class PubSubOptions(GlobalOptions):
@@ -198,6 +197,8 @@ class PubSubOptions(GlobalOptions):
       secrets=None,
       topic=None,
   ):
+    super().__init__()
+
     self.max_instances = max_instances or global_options.max_instances
     self.allowed_methods = allowed_methods or global_options.allowed_methods
     self.allowed_origins = allowed_origins or global_options.allowed_origins
@@ -210,8 +211,6 @@ class PubSubOptions(GlobalOptions):
     self.service_account = service_account or global_options.service_account
     self.secrets = secrets or global_options.secrets
     self.topic = topic
-
-    super().__init__()
 
 
 def set_global_options(
