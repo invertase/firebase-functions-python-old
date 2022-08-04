@@ -49,7 +49,7 @@ class MessagePublishedData(TypedDict):
 def pubsub_wrap_handler(
     func: Callable[[CloudEventMessage], None],
     raw: CloudEvent[Any],
-    options: PubSubOptions,
+    # options: PubSubOptions,
 ) -> Response:
   message_published_data: CloudEvent[Message[Any]] = raw
 
@@ -95,10 +95,11 @@ def on_message_published(
 
     @functools.wraps(func)
     def pubsub_view_func(data: CloudEvent[Any]):
+      # TODO this is not tested in a real deployment.
       return pubsub_wrap_handler(
           func=func,
           raw=data,
-          options=pubsub_options,
+          # options=pubsub_options,
       )
 
     project = os.environ.get('GCLOUD_PROJECT')

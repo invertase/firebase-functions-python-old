@@ -22,8 +22,9 @@ from typing import (
     Optional,
 )
 
+from functions_framework import logging
+
 from firebase_functions import apps
-from firebase_functions.log import (error, info, warn)
 from firebase_functions.errors import (FunctionsErrorCode, HttpsError)
 from firebase_functions.manifest import (
     CallableTrigger,
@@ -282,7 +283,7 @@ def check_auth_token(req: Request, ctx: CallableRequest) -> TokenStatus:
 
       return TokenStatus.VALID
     except auth.InvalidIdTokenError as e:
-      error(f'Error validating token: {e}')
+      logging.error(f'Error validating token: {e}')
       return TokenStatus.INVALID
   return TokenStatus.INVALID
 
@@ -295,7 +296,7 @@ def check_app_token(req: Request, ctx: CallableRequest) -> TokenStatus:
 
   # TODO validate the token using the Admin SDK once app check is supported.
   # For now, just assume it's valid.
-  warn('App check is not supported in the Admin SDK.')
+  logging.warning('App check is not supported in the Admin SDK.')
   ctx = dataclasses.replace(ctx, app=None)
   return TokenStatus.VALID
 
@@ -324,9 +325,10 @@ def check_tokens(
     errs.append(('Auth token was rejected.', log_payload))
 
   if len(errs) == 0:
-    info('Callable request verification passed', log_payload)
+    logging.info('Callable request verification passed', log_payload)
   else:
-    warn(f'Callable request verification failed: ${errs}', log_payload)
+    logging.warning(f'Callable request verification failed: ${errs}',
+                    log_payload)
 
   # Clears out the content in the logPayload
   # or it will be persisted in the next call.
@@ -338,18 +340,18 @@ def check_tokens(
 def valid_request(request: Request) -> bool:
   # The body must not be empty.
   if request.json is None:
-    warn('Request is missing body.')
+    logging.warning('Request is missing body.')
     return False
 
   # Make sure it's a POST.
   if request.method != 'POST':
-    warn('Request has invalid method.', request.method)
+    logging.warning('Request has invalid method.', request.method)
     return False
 
   content_type: Optional[str] = request.headers.get('Content-Type')
 
   if content_type is None:
-    warn('Request is missing Content-Type.', content_type)
+    logging.warning('Request is missing Content-Type.', content_type)
     return False
 
   # If it has a charset, just ignore it for now.
@@ -364,14 +366,13 @@ def valid_request(request: Request) -> bool:
 
   # Check that the Content-Type is JSON.
   if content_type != 'application/json':
-
-    warn('Request has incorrect Content-Type.', content_type)
+    logging.warning('Request has incorrect Content-Type.', content_type)
     return False
 
   # The body must have data.
   if request.json['data'] is None:
     # TODO should we check if data exists or not?
-    warn('Request body is missing data.', request.json)
+    logging.warning('Request body is missing data.', request.json)
     return False
 
   extra_keys = {}
@@ -382,7 +383,7 @@ def valid_request(request: Request) -> bool:
       extra_keys.update({key: request.json[key]})
 
   if len(extra_keys) != 0:
-    warn(
+    logging.warning(
         'Request body has extra fields: ',
         ''.join(f'{key}: {value},' for (key, value) in extra_keys.items()),
     )
@@ -405,7 +406,7 @@ def wrap_on_call_handler(
 ) -> Response:
   try:
     if not valid_request(request):
-      error('Invalid request, unable to process.')
+      logging.error('Invalid request, unable to process.')
       raise HttpsError(FunctionsErrorCode.INVALID_ARGUMENT, 'Bad Request')
 
     context: CallableRequest = CallableRequest(raw_request=request)
@@ -447,7 +448,7 @@ def wrap_on_call_handler(
   # pylint: disable=broad-except
   except Exception as err:
     if not isinstance(err, HttpsError):
-      error('Unhandled error', err)
+      logging.error('Unhandled error', err)
       err = HttpsError(FunctionsErrorCode.INTERNAL, 'INTERNAL')
 
     status = err.http_error_code.status

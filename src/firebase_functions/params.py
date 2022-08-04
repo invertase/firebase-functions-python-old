@@ -1,7 +1,10 @@
-'''Module for params that can make Cloud Functions codebases generic.'''
+'''
+Module for params that can make Cloud Functions codebases generic.
+'''
 
 import os
 import abc
+
 from dataclasses import dataclass
 from enum import Enum
 from typing import Iterable, Sequence, Union, TypeVar, Generic, Optional

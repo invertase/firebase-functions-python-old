@@ -1,10 +1,10 @@
-'''Module for options that can be used to configure Cloud Functions
+'''
+Module for options that can be used to configure Cloud Functions
 deployments.
 '''
 
 from enum import Enum
 from dataclasses import dataclass
-import os
 from typing import List, Optional, Union
 
 from firebase_functions.params import IntParam, SecretParam, StringParam
@@ -158,6 +158,8 @@ class HttpsOptions(GlobalOptions):
     self.secrets = secrets or global_options.secrets
     self.allow_invalid_app_check_token = allow_invalid_app_check_token
 
+    super().__init__()
+
 
 class PubSubOptions(GlobalOptions):
   '''Options available for all Pub/Sub function types in a codebase.
@@ -208,6 +210,8 @@ class PubSubOptions(GlobalOptions):
     self.service_account = service_account or global_options.service_account
     self.secrets = secrets or global_options.secrets
     self.topic = topic
+
+    super().__init__()
 
 
 def set_global_options(

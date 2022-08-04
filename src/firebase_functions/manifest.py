@@ -1,5 +1,8 @@
 '''Specs for the served functions.yaml of the user's functions'''
 
+# We're ignoring pylint's warning about names since we want
+# the manifest to match the contract specs.
+
 # pylint: disable=invalid-name
 
 from dataclasses import dataclass

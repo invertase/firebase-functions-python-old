@@ -4,7 +4,7 @@ Firebase Functions for Python.
 
 from dataclasses import dataclass
 import datetime
-from typing import Generic, Set, Type, TypeVar
+from typing import Generic, Set, TypeVar
 import firebase_admin
 
 T = TypeVar('T')

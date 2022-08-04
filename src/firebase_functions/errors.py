@@ -50,8 +50,10 @@ class FunctionsErrorCode(str, Enum):
 
 
 class HttpErrorCode():
-  '''A standard error code that will be returned to the client. This also
-  determines the HTTP status code of the response, as defined in code.proto.'''
+  '''
+  A standard error code that will be returned to the client. This also
+  determines the HTTP status code of the response, as defined in code.proto.
+  '''
   canonical_name: CanonicalErrorCodeName
   status: int
 
