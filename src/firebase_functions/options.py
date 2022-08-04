@@ -181,6 +181,7 @@ class PubSubOptions(GlobalOptions):
   '''
 
   topic: Optional[str] = None
+  retry: Optional[bool] = None
 
   def __init__(
       self,
@@ -196,6 +197,7 @@ class PubSubOptions(GlobalOptions):
       ingress=None,
       secrets=None,
       topic=None,
+      retry = None,
   ):
     super().__init__()
 
@@ -211,6 +213,7 @@ class PubSubOptions(GlobalOptions):
     self.service_account = service_account or global_options.service_account
     self.secrets = secrets or global_options.secrets
     self.topic = topic
+    self.retry = retry or False
 
 
 def set_global_options(

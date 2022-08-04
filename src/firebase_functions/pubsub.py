@@ -10,7 +10,7 @@ from typing import Any, Callable, Dict, Generic, List, TypeVar, TypedDict, Union
 
 from firebase_functions.options import PubSubOptions, Sentinel, VpcOptions, Memory, IngressSettings
 from firebase_functions.manifest import EventTrigger, ManifestEndpoint
-from firebase_functions.params import SecretParam, StringParam, IntParam
+from firebase_functions.params import BoolParam, SecretParam, StringParam, IntParam
 
 T = TypeVar('T')
 
@@ -74,7 +74,7 @@ def pubsub_wrap_handler(
 
 
 def on_message_published(
-    func: Callable[[CloudEvent], None] = None,
+    func: Callable[[CloudEventMessage], None] = None,
     *,
     topic: str,
     region: Union[None, StringParam, str] = None,
@@ -86,7 +86,8 @@ def on_message_published(
     ingress: Union[None, IngressSettings, Sentinel] = None,
     service_account: Union[None, StringParam, str, Sentinel] = None,
     secrets: Union[None, List[StringParam], SecretParam, Sentinel] = None,
-) -> Callable[[CloudEvent], None]:
+    retry: Union[None, bool, BoolParam] = None,
+) -> Callable[[CloudEventMessage], None]:
   '''
       Decorator for functions that are triggered by Pub/Sub.'''
 
@@ -102,6 +103,7 @@ def on_message_published(
       ingress=ingress,
       service_account=service_account,
       secrets=secrets,
+      retry=retry,
   )
 
   trigger = {} if pubsub_options is None else pubsub_options.metadata()
@@ -124,6 +126,7 @@ def on_message_published(
             eventFilters={
                 'topic': f'projects/{project}/topics/{topic}',
             },
+            retry=pubsub_options.retry,
         ),
         region=pubsub_options.region,
         availableMemoryMb=pubsub_options.memory,
