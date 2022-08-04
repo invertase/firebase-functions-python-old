@@ -32,7 +32,7 @@ def get_module_name(file_path: str) -> str:
 
 
 def get_triggers():
-  spec = util.spec_from_file_location('main')
+  spec = util.spec_from_file_location('main.py')
   if spec is not None and spec.loader is not None:
     module = util.module_from_spec(spec)
     spec.loader.exec_module(module)
