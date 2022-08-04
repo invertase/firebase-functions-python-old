@@ -1,6 +1,6 @@
-'''
+"""
 Test the functions that serve the admin and triggers.
-'''
+"""
 
 import dataclasses
 import json
@@ -31,81 +31,97 @@ os.environ['GCLOUD_PROJECT'] = 'test-project'
     ),
 )
 def http_request_function(req, res: Response):
-  LOGGER.debug(req.data.decode('utf-8'))
-  res.set_data('Hello World!')
+    """
+    Function gather HTTP request response
+    """
+    LOGGER.debug(req.data.decode('utf-8'))
+    res.set_data('Hello World!')
 
 
 @on_call(memory=options.Memory.MB_256)
 def http_callable_function(req):
-  LOGGER.debug(req.data)
-  return 'Hello World, again!'
+    """
+    Function performs HTTP call
+    """
+    LOGGER.debug(req.data)
+    return 'Hello World, again!'
 
 
-triggers = {}
-
-triggers['http_request_function'] = http_request_function
-triggers['http_callable_function'] = http_callable_function
+triggers = {'http_request_function': http_request_function, 'http_callable_function': http_callable_function}
 
 
 def test_admin_view_func():
-  with serve_admin(triggers=triggers).test_client() as client:
-    res = client.get('/__/functions.yaml')
-    assert res.status_code == 200
-    result = yaml.safe_load(res.get_data())
-    assert result['endpoints']['httprequestfunction'][
-        'httpsTrigger'] is not None
-    assert result['endpoints']['httpcallablefunction'][
-        'callableTrigger'] is not None
+    """
+    Function tests admin view function response
+    """
+    with serve_admin(triggers=triggers).test_client() as client:
+        res = client.get('/__/functions.yaml')
+        assert res.status_code == 200, 'response failure, status_code != 200 '
+        result = yaml.safe_load(res.get_data())
+        assert result['endpoints']['httprequestfunction'][
+                   'httpsTrigger'] is not None, 'Failure, httpsTrigger is none'
+        assert result['endpoints']['httpcallablefunction'][
+                   'callableTrigger'] is not None, 'Failure, callableTrigger is none'
 
 
 def test_trigger_view_func():
+    """
+    Function tests for trigger view functions authentication, responses and requests
+    """
+    with serve_triggers(triggers=triggers).test_client() as client:
+        res_request = client.post(
+            '/http_request_function',
+            data=json.dumps(dict(foo='bar')),
+            content_type='application/json',
+        )
 
-  with serve_triggers(triggers=triggers).test_client() as client:
-    res_request = client.post(
-        '/http_request_function',
-        data=json.dumps(dict(foo='bar')),
-        content_type='application/json',
-    )
+        assert res_request.data.decode('utf-8') == 'Hello World!', 'Discrepancy found, response data != "Hello World!"'
 
-    assert res_request.data.decode('utf-8') == 'Hello World!'
+        res_call = client.post(
+            '/http_callable_function',
+            data=json.dumps({'data': 'bar'}),
+            content_type='application/json',
+        )
 
-    res_call = client.post(
-        '/http_callable_function',
-        data=json.dumps({'data': 'bar'}),
-        content_type='application/json',
-    )
-    # Authenticated missing request
-    assert res_request.data.decode('utf-8') == 'Hello World!'
+        # Authenticated missing request
+        assert json.loads(res_call.data.decode('utf-8')).get(
+            'data') == 'Hello World, again!', 'Unauthenticated response or found request, response ' \
+                                              'data != "Hello World!, again!"'
 
-    res_call = client.post(
-        '/http_callable_function',
-        data=json.dumps({'data': 'bar'}),
-        headers={'Authorization': 'bar'},
-        content_type='application/json',
-    )
-    # Unauthenticated request
-    assert json.loads(res_call.data.decode('utf-8')).get(
-        'error')['message'] == 'Unauthenticated'
+        res_call = client.post(
+            '/http_callable_function',
+            data=json.dumps({'data': 'bar'}),
+            headers={'Authorization': 'bar'},
+            content_type='application/json',
+        )
+        # Unauthenticated request
+        assert json.loads(res_call.data.decode('utf-8')).get(
+            'error')['message'] == 'Unauthenticated', 'Authenticated response, error message != "Unauthenticated"'
 
 
 def test_quit_view_func():
-  with serve_admin(triggers=triggers).test_client() as client:
-    res = client.get('/__/quitquitquit')
-    assert res.status_code == 200
+    """
+    Function tests for quit view function response
+    """
+    with serve_admin(triggers=triggers).test_client() as client:
+        res = client.get('/__/quitquitquit')
+        assert res.status_code == 200, 'response failure, status_code != 200'
 
 
 def test_asdict_factory_cleanup():
+    """
+    Function tests fo factory cleanups as dictionaries
+    """
+    endpoints = {}
 
-  endpoints = {}
+    for name, trigger in triggers.items():
+        endpoints[name.replace('_', '').lower()] = trigger.__firebase_endpoint__
 
-  for name, trigger in triggers.items():
-    endpoints[name.replace('_', '').lower()] = trigger.__firebase_endpoint__
+    manifest = dataclasses.asdict(
+        Manifest(endpoints=endpoints),
+        dict_factory=clean_nones_and_set_defult,
+    )
 
-  manifest = dataclasses.asdict(
-      Manifest(endpoints=endpoints),
-      dict_factory=clean_nones_and_set_defult,
-  )
-
-  assert manifest['endpoints']['httprequestfunction']['maxInstances'] is None
-  with pytest.raises(KeyError):
-    assert manifest['endpoints']['httpcallablefunction']['vpc'] is None
+    assert manifest['endpoints']['httprequestfunction']['maxInstances'] is None, 'Failure, maxInstances is none'
+    with pytest.raises(KeyError):
+        assert manifest['endpoints']['httpcallablefunction']['vpc'] is None, 'Failure, vpc is none'
