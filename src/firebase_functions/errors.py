@@ -1,11 +1,14 @@
-""" Errors and exceptions in this package. """
+'''
+Https errors and error mapping.
+'''
 
 from enum import Enum
 from typing import Any, Optional, TypedDict
+from typing_extensions import NotRequired
 
 
 class CanonicalErrorCodeName(str, Enum):
-  """The canonical error code name for a given error code."""
+  '''The canonical error code name for a given error code.'''
   OK = 'OK'
   CANCELLED = 'CANCELLED'
   UNKNOWN = 'UNKNOWN'
@@ -26,7 +29,7 @@ class CanonicalErrorCodeName(str, Enum):
 
 
 class FunctionsErrorCode(str, Enum):
-  """The error code for a given error."""
+  '''The error code for a given error.'''
   OK = 'ok'
   CANCELLED = 'cancelled'
   UNKNOWN = 'unknown'
@@ -47,51 +50,54 @@ class FunctionsErrorCode(str, Enum):
 
 
 class HttpErrorCode():
+  '''A standard error code that will be returned to the client. This also
+  determines the HTTP status code of the response, as defined in code.proto.'''
   canonical_name: CanonicalErrorCodeName
   status: int
 
   def __init__(
       self,
-      canonical_name: FunctionsErrorCode,
-      status: str,
+      canonical_name: CanonicalErrorCodeName,
+      status: int,
   ):
     self.canonical_name = canonical_name
     self.status = status
 
 
 error_code_map = {
-    FunctionsErrorCode.ok:
+    FunctionsErrorCode.OK:
         HttpErrorCode(CanonicalErrorCodeName.OK, 200),
-    FunctionsErrorCode.cancelled:
+    FunctionsErrorCode.CANCELLED:
         HttpErrorCode(CanonicalErrorCodeName.CANCELLED, 499),
-    FunctionsErrorCode.unknown:
+    FunctionsErrorCode.UNKNOWN:
         HttpErrorCode(CanonicalErrorCodeName.UNKNOWN, 500),
-    FunctionsErrorCode.invalid_argument:
+    FunctionsErrorCode.INVALID_ARGUMENT:
         HttpErrorCode(CanonicalErrorCodeName.INVALID_ARGUMENT, 400),
-    FunctionsErrorCode.deadline_exceeded:
+    FunctionsErrorCode.DEADLINE_EXCEEDED:
         HttpErrorCode(CanonicalErrorCodeName.DEADLINE_EXCEEDED, 504),
-    FunctionsErrorCode.not_found:
+    FunctionsErrorCode.NOT_FOUND:
         HttpErrorCode(CanonicalErrorCodeName.NOT_FOUND, 404),
-    FunctionsErrorCode.already_exists:
+    FunctionsErrorCode.ALREADY_EXISTS:
         HttpErrorCode(CanonicalErrorCodeName.ALREADY_EXISTS, 409),
-    FunctionsErrorCode.permission_denied:
+    FunctionsErrorCode.INTERNAL:
+        HttpErrorCode(CanonicalErrorCodeName.INTERNAL, 500),
+    FunctionsErrorCode.PERMISSION_DENIED:
         HttpErrorCode(CanonicalErrorCodeName.PERMISSION_DENIED, 403),
-    FunctionsErrorCode.unauthenticated:
+    FunctionsErrorCode.UNAUTHENTICATED:
         HttpErrorCode(CanonicalErrorCodeName.UNAUTHENTICATED, 401),
 }
 
 
 class HttpErrorWireFormat(TypedDict):
-  details: Optional[Any]
+  details: NotRequired[Any]
   status: CanonicalErrorCodeName
   message: str
 
 
 class HttpsError(Exception):
-  """
-  A standard error code that will be returned to the client. This also
-  determines the HTTP status code of the response, as defined in code.proto.
-  """
+  '''
+  A standard HTTP error that will be returned to the client.
+  '''
 
   def __init__(
       self,
@@ -110,8 +116,14 @@ class HttpsError(Exception):
     return self.code.canonical_name.value
 
   def to_dict(self):
+    if self.details is None:
+      return HttpErrorWireFormat(
+          status=self.http_error_code.canonical_name.value,
+          message=self.message,
+      )
+
     return HttpErrorWireFormat(
-        details={self.details} if self.details is not None else {},
+        details={self.details},
         status=self.http_error_code.canonical_name,
         message=self.message,
     )

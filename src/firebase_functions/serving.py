@@ -1,28 +1,24 @@
+'''
+Module used to serve Firebase functions locally and remotely.
+'''
+
 import asyncio
 import dataclasses
-from enum import Enum
 import sys
-from typing import Callable
-import yaml
+
+from enum import Enum
+from typing import Any, Callable
+from yaml import dump
 
 from flask import Flask
 from flask import jsonify
 from flask import request
 from flask import Response
 
-from firebase_functions.manifest import ManifestEndpoint, ManifestStack
+from firebase_functions.manifest import CallableTrigger, HttpsTrigger, ManifestEndpoint, Manifest
+from firebase_functions.options import Sentinel
 
 __ALLOWED_METHODS = ['GET', 'POST', 'PUT', 'DELETE']
-
-
-def asdict_factory(data) -> dict:
-
-  def convert_value(obj):
-    if isinstance(obj, Enum):
-      return obj.value
-    return obj
-
-  return dict((k, convert_value(v)) for k, v in data)
 
 
 def wrap_http_trigger(trig: Callable) -> Callable:
@@ -41,86 +37,108 @@ def wrap_pubsub_trigger(trig):
 
   def wrapper():
     data = request.get_json(force=True)
-    trig(data, {})
+    trig(data)
     return jsonify({})
 
   return wrapper
 
 
-def clean_nones(value) -> any:
-  if isinstance(value, list):
-    return [clean_nones(x) for x in value if x is not None]
-  elif isinstance(value, dict):
-    return {
-        key: clean_nones(val) for key, val in value.items() if val is not None
-    }
-  else:
-    return value
+def clean_nones_and_set_defult(data) -> dict:
+
+  def convert_value(obj):
+    if isinstance(obj, Enum):
+      return obj.value
+    elif isinstance(obj, Sentinel):
+      return None
+
+    return obj
+
+  return dict((k, convert_value(v)) for k, v in data if v is not None)
 
 
-def wrap_functions_yaml(triggers) -> any:
-  """Wrapper around each trigger in the user's codebase."""
+def is_valid_trigger(trigger: ManifestEndpoint) -> bool:
+  return is_http_trigger(trigger) or is_callable_trigger(
+      trigger) or is_pubsub_trigger(trigger)
 
-  def wrapper():
-    trigger_data = {}
 
-    for name, trig in triggers.items():
-      endpoint = add_entrypoint(
-          name,
-          clean_nones(
-              dataclasses.asdict(trig.__endpoint__,
-                                 dict_factory=asdict_factory)),
-      )
-      trigger_data.update(endpoint)
+def triggers_as_yaml(triggers: dict) -> str:
+  '''Convert a list of triggers to a YAML string.'''
 
-    result = ManifestStack(endpoints=trigger_data)
-    response = yaml.dump(clean_nones(result.__dict__),
-                         default_flow_style=False,
-                         default_style=None)
-    return Response(response, mimetype='text/yaml')
+  endpoints: dict[str, ManifestEndpoint] = {}
+
+  for name, trig in triggers.items():
+
+    trigger = trig.__firebase_endpoint__
+
+    if not is_valid_trigger(trigger):
+      continue
+    else:
+      # Lowercase the name of the function and replace '_' to support CF naming.
+      endpoints[name.replace('_', '').lower()] = trigger
+
+  manifest_yaml = dump(
+      dataclasses.asdict(
+          Manifest(endpoints=endpoints),
+          dict_factory=clean_nones_and_set_defult,
+      ))
+
+  return manifest_yaml
+
+
+def wrap_functions_yaml(triggers: dict) -> Any:
+  '''Wrapper around each trigger in the user's codebase.'''
+
+  def wrapper() -> Response:
+    triggers_yaml = triggers_as_yaml(triggers)
+    return Response(triggers_yaml, mimetype='text/yaml')
 
   return wrapper
 
 
-def add_entrypoint(name, trigger) -> dict:
-  """Add an entrypoint for a single function in the user's codebase."""
-  endpoint = {}
-  endpoint[name] = trigger
-  return endpoint
+def is_http_trigger(endpoint: ManifestEndpoint) -> bool:
+  ''' If the function's trigger contains `httpsTrigger` attribute,
+  then it's a https function. '''
+  return (endpoint.httpsTrigger is not None or
+          endpoint.httpsTrigger is HttpsTrigger)
 
 
-def is_http_trigger(trigger: ManifestEndpoint) -> bool:
-  # If the function's trigger contains `httpsTrigger` attribute,
-  # then it's a https function.
-  return trigger.httpsTrigger is not None or trigger.httpsTrigger != {}
+def is_callable_trigger(endpoint: ManifestEndpoint) -> bool:
+  ''' If the function's trigger contains `httpsTrigger` attribute,
+  then it's a https function. '''
+  return (endpoint.callableTrigger is not None or
+          endpoint.callableTrigger is CallableTrigger)
 
 
-def is_pubsub_trigger(trigger: ManifestEndpoint) -> bool:
-  return trigger.eventTrigger[
+def is_pubsub_trigger(endpoint: ManifestEndpoint) -> bool:
+  return endpoint.eventTrigger is not None and endpoint.eventTrigger[
       'eventType'] == 'google.cloud.pubsub.topic.v1.messagePublished'
 
 
-def serve_triggers(triggers: list[Callable]) -> Flask:
-  """Start serving all triggers provided by the user locally.
-  Used by the generated `app` file upon deployment."""
+def serve_triggers(triggers: dict[str, Callable]) -> Flask:
+  '''
+  Start serving all triggers provided by the user locally.
+  Used by the generated `app` file upon deployment.
+  '''
   app = Flask(__name__)
 
-  for name, trig in triggers.items():
+  for name, trigger in triggers.items():
 
-    trigger = getattr(trig, '__endpoint__')
+    endpoint = getattr(trigger, '__firebase_endpoint__')
 
-    if is_http_trigger(trigger):
+    if is_http_trigger(endpoint) or is_callable_trigger(endpoint):
       app.add_url_rule(
           f'/{name}',
           endpoint=name,
-          view_func=wrap_http_trigger(trig),
+          view_func=wrap_http_trigger(trigger),
           methods=__ALLOWED_METHODS,
       )
-    elif is_pubsub_trigger(trigger):
-      app.add_url_rule(f'/{name}',
-                       endpoint=name,
-                       view_func=wrap_pubsub_trigger(trig),
-                       methods=['POST'])
+    elif is_pubsub_trigger(endpoint):
+      app.add_url_rule(
+          f'/{name}',
+          endpoint=name,
+          view_func=wrap_pubsub_trigger(trigger),
+          methods=['POST'],
+      )
     else:
       raise ValueError('Unknown trigger type!')
 
@@ -133,8 +151,8 @@ def quitquitquit():
 
 
 def serve_admin(triggers) -> Flask:
-  """Generate a specs `functions.yaml` file and serve it locally
-  on the path `<host>:<port>/__/functions.yaml`."""
+  '''Generate a specs `functions.yaml` file and serve it locally
+  on the path `<host>:<port>/__/functions.yaml`.'''
 
   app = Flask(__name__)
   app.add_url_rule(

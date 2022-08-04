@@ -1,24 +1,50 @@
-from enum import Enum
+'''
+Module for Cloud Functions that listen to HTTPS endpoints.
+These can be raw web requests and Callable RPCs.
+'''
+
+import dataclasses
 import functools
 import json
 import re
 import flask
-from typing import (Any, Generic, List, TypeVar, Union, Optional)
+
+from enum import Enum
 from dataclasses import dataclass
 from collections.abc import Callable
 from firebase_admin import auth
+from typing import (
+    Any,
+    Generic,
+    List,
+    TypeVar,
+    Union,
+    Optional,
+)
 
 from firebase_functions import apps
 from firebase_functions.log import (error, info, warn)
-from firebase_functions.errors import FunctionsErrorCode, HttpsError
-from firebase_functions.manifest import ManifestEndpoint
-from firebase_functions.params import (SecretParam, StringParam, IntParam,
-                                       ListParam)
-from firebase_functions.options import (HttpsOptions, Memory, VpcOptions,
-                                        IngressSettings, Sentinel)
+from firebase_functions.errors import (FunctionsErrorCode, HttpsError)
+from firebase_functions.manifest import (
+    CallableTrigger,
+    HttpsTrigger,
+    ManifestEndpoint,
+)
+from firebase_functions.params import (
+    SecretParam,
+    StringParam,
+    IntParam,
+)
+from firebase_functions.options import (
+    HttpsOptions,
+    Memory,
+    VpcOptions,
+    IngressSettings,
+    Sentinel,
+)
 
-FlaskRequest = flask.Request
-FlaskResponse = flask.Response
+Request = flask.Request
+Response = flask.Response
 
 T = TypeVar('T')
 
@@ -80,9 +106,6 @@ class DecodedAppCheckToken:
     ''' Get a property from the AppCheck token. '''
     pass
 
-  def __getattribute__(self, name: StringParam) -> Any:
-    pass
-
 
 @dataclass(frozen=True)
 class AppCheckData:
@@ -95,7 +118,7 @@ class AppCheckData:
 class AuthData:
   '''The IntParamerface for Auth tokens verified in Callable functions.'''
 
-  uid: StringParam
+  uid: str
   '''User ID of the auth token.'''
 
   token: dict
@@ -106,7 +129,7 @@ class AuthData:
 class CallableRequest(Generic[T]):
   '''The request sent to a callable function.'''
 
-  raw_request: FlaskRequest
+  raw_request: Request
   '''The raw request handled by the callable.'''
 
   data: Optional[T] = None
@@ -122,23 +145,22 @@ class CallableRequest(Generic[T]):
   '''An unverified token for a Firebase Instance ID.'''
 
 
-C = TypeVar('C', bound=Callable)
-
-
 def on_request(
-    allowed_origins: StringParam = None,
-    allowed_methods: StringParam = None,
+    func: Callable[[Request, Response], None] = None,
+    *,
+    allowed_origins: Optional[StringParam] = None,
+    allowed_methods: Optional[StringParam] = None,
     region: Optional[StringParam] = None,
-    memory: Union[None, IntParam, Memory, Sentinel] = None,
+    memory: Union[IntParam, Memory, Sentinel, None] = None,
     timeout_sec: Optional[IntParam] = None,
-    min_instances: Union[None, IntParam, IntParam, Sentinel] = None,
-    max_instances: Union[None, IntParam, IntParam, Sentinel] = None,
+    min_instances: Union[None, IntParam, int, Sentinel] = None,
+    max_instances: Union[None, IntParam, int, Sentinel] = None,
     vpc: Union[None, VpcOptions, Sentinel] = None,
     ingress: Union[None, IngressSettings, Sentinel] = None,
     service_account: Union[None, StringParam, StringParam, Sentinel] = None,
-    secrets: Union[None, List[StringParam], SecretParam, Sentinel] = None,
-) -> Callable[[FlaskRequest], FlaskResponse]:
-  """Decorator for a function that handles raw HTTPS requests.
+    secrets: Union[List[StringParam], SecretParam, Sentinel, None] = None,
+) -> Callable[[Request], None]:
+  '''Decorator for a function that handles raw HTTPS requests.
 
   Parameters:
       allowed_origins: Origins allowed to invoke this function. Affects CORS
@@ -161,9 +183,9 @@ def on_request(
       secrets:
 
   To reset an attribute to factory default, use USE_DEFAULT
-  """
+  '''
 
-  # ConStringParamuct an Options object out from the args passed
+  # Construct an Options object out from the args passed
   # by the user, if any.
   request_options = HttpsOptions(
       allowed_origins=allowed_origins,
@@ -179,42 +201,38 @@ def on_request(
       secrets=secrets,
   )
 
-  metadata = {} if request_options is None else request_options.metadata()
-  trigger = {
-      'platform': 'gcfv2',
-      **metadata, 'labels': {},
-      'httpsTrigger': {
-          'allowInsecure': False
-      }
-  }
+  trigger = {} if request_options is None else request_options.metadata()
 
-  def wrapper(func: Callable[[FlaskRequest], FlaskResponse]) -> Any:
-    metadata['id'] = func.__name__
+  def wrapper(func):
 
     @functools.wraps(func)
-    def request_view_func(request: FlaskRequest) -> FlaskResponse:
+    def request_view_func(request: Request, response: Response) -> Response:
+      func(request, response)
+      return response
 
-      return func(request)
-
-    manifest = ManifestEndpoint(
+    endpoint = ManifestEndpoint(
         entryPoint=func.__name__,
-        region=region,
-        platform='gcfv2',
-        labels={},
-        httpsTrigger={},
-        vpc=vpc,
-        availableMemoryMb=memory.value if memory is not None else None,
-        maxInstances=max_instances,
-        minInstances=min_instances,
+        httpsTrigger=HttpsTrigger(),
+        region=request_options.region,
+        availableMemoryMb=request_options.memory,
+        timeoutSeconds=request_options.timeout_sec,
+        minInstances=request_options.min_instances,
+        maxInstances=request_options.max_instances,
+        vpc=request_options.vpc,
+        ingressSettings=request_options.ingress,
+        serviceAccount=request_options.service_account,
+        secretEnvironmentVariables=request_options.secrets,
     )
 
-    request_view_func.firebase_metadata = metadata
-    request_view_func.trigger = trigger
-    request_view_func.__endpoint__ = manifest
+    request_view_func.__firebase_trigger__ = trigger
+    request_view_func.__firebase_endpoint__ = endpoint
 
     return request_view_func
 
-  return wrapper
+  if func is None:
+    return wrapper
+
+  return wrapper(func)
 
 
 class TokenStatus(Enum):
@@ -231,8 +249,8 @@ class TokenStatus(Enum):
 
 
 class CallableTokenStatus():
-  app: TokenStatus = None
-  auth: TokenStatus = None
+  app: Optional[TokenStatus] = None
+  auth: Optional[TokenStatus] = None
 
   def __init__(self) -> None:
     self.app = TokenStatus.INVALID
@@ -245,7 +263,7 @@ class CallableTokenStatus():
     }
 
 
-def check_auth_token(req: FlaskRequest, ctx: CallableRequest) -> TokenStatus:
+def check_auth_token(req: Request, ctx: CallableRequest) -> TokenStatus:
   ''' Validate the auth token in the callable request. '''
   authorization = req.headers.get('Authorization')
   if authorization is None:
@@ -254,29 +272,36 @@ def check_auth_token(req: FlaskRequest, ctx: CallableRequest) -> TokenStatus:
   if match is not None:
     try:
       id_token = match.string
-      auth_token = {}
+      auth_token: dict[str, str] = {}
       auth.verify_id_token(id_token, app=apps())
-      ctx.auth = AuthData(uid=auth_token['uid'], token=auth_token)
+
+      ctx = dataclasses.replace(
+          ctx,
+          auth=AuthData(uid=auth_token['uid'], token=auth_token),
+      )
+
       return TokenStatus.VALID
     except auth.InvalidIdTokenError as e:
       error(f'Error validating token: {e}')
       return TokenStatus.INVALID
+  return TokenStatus.INVALID
 
 
-def check_app_token(req: FlaskRequest, ctx: CallableRequest) -> TokenStatus:
+def check_app_token(req: Request, ctx: CallableRequest) -> TokenStatus:
   ''' Validate the app token in the callable request. '''
   app_check = req.headers.get('X-Firebase-AppCheck')
   if app_check is None:
     return TokenStatus.MISSING
-  #
+
   # TODO validate the token using the Admin SDK once app check is supported.
   # For now, just assume it's valid.
-  ctx.app = None
+  warn('App check is not supported in the Admin SDK.')
+  ctx = dataclasses.replace(ctx, app=None)
   return TokenStatus.VALID
 
 
 def check_tokens(
-    req: FlaskRequest,
+    req: Request,
     ctx: CallableRequest,
 ) -> CallableTokenStatus:
   verifications = CallableTokenStatus()
@@ -310,7 +335,7 @@ def check_tokens(
   return verifications
 
 
-def valid_request(request: FlaskRequest) -> bool:
+def valid_request(request: Request) -> bool:
   # The body must not be empty.
   if request.json is None:
     warn('Request is missing body.')
@@ -321,8 +346,11 @@ def valid_request(request: FlaskRequest) -> bool:
     warn('Request has invalid method.', request.method)
     return False
 
-  # Check that the Content-Type is JSON.
-  content_type: str = request.headers.get('Content-Type').lower()
+  content_type: Optional[str] = request.headers.get('Content-Type')
+
+  if content_type is None:
+    warn('Request is missing Content-Type.', content_type)
+    return False
 
   # If it has a charset, just ignore it for now.
   semi_colon = 0
@@ -334,13 +362,15 @@ def valid_request(request: FlaskRequest) -> bool:
   except ValueError:
     pass
 
+  # Check that the Content-Type is JSON.
   if content_type != 'application/json':
 
     warn('Request has incorrect Content-Type.', content_type)
     return False
 
   # The body must have data.
-  if request.json == 'undefined':
+  if request.json['data'] is None:
+    # TODO should we check if data exists or not?
     warn('Request body is missing data.', request.json)
     return False
 
@@ -356,6 +386,7 @@ def valid_request(request: FlaskRequest) -> bool:
         'Request body has extra fields: ',
         ''.join(f'{key}: {value},' for (key, value) in extra_keys.items()),
     )
+    return False
 
   return True
 
@@ -367,50 +398,53 @@ class HttpResponseBody:
 
 
 def wrap_on_call_handler(
-    func: Callable[[FlaskRequest], FlaskResponse],
-    request: FlaskRequest,
-    response: FlaskResponse,
+    func: Callable[[CallableRequest], Any],
+    request: Request,
+    response: Response,
     options: HttpsOptions,
-) -> CallableRequest[T]:
-  if not valid_request(request):
-    # TODO use the Cloud Logger to log an error entry.
-    raise HttpsError(FunctionsErrorCode.INVALID_ARGUMENT, 'Bad Request')
-
-  context = CallableRequest(raw_request=request)
-  token_status = check_tokens(request, context)
-
-  if token_status.auth == TokenStatus.INVALID:
-    raise HttpsError(FunctionsErrorCode.UNAUTHENTICATED, 'Unauthenticated')
-
-  if token_status.app == TokenStatus.INVALID and not options.allow_invalid_app_check_token:
-    raise HttpsError(FunctionsErrorCode.UNAUTHENTICATED, 'Unauthenticated')
-
-  instance_id = request.headers.get('Firebase-Instance-ID-Token')
-  if instance_id is not None:
-    # Validating the token requires an http request, so we don't do it.
-    # If the user wants to use it for something, it will be validated then.
-    # Currently, the only real use case for this token is for sending
-    # pushes with FCM. In that case, the FCM APIs will validate the token.
-    context.instance_id_token = request.headers.get(
-        'Firebase-Instance-ID-Token')
-
-  data = json.loads(request.data)
-  result: FlaskResponse
-
-  arg: CallableRequest = CallableRequest(
-      raw_request=context.raw_request,
-      data=data,
-      auth=context.auth,
-      app=context.app,
-      instance_id_token=context.instance_id_token,
-  )
-
+) -> Response:
   try:
+    if not valid_request(request):
+      error('Invalid request, unable to process.')
+      raise HttpsError(FunctionsErrorCode.INVALID_ARGUMENT, 'Bad Request')
+
+    context: CallableRequest = CallableRequest(raw_request=request)
+    token_status = check_tokens(request, context)
+
+    if token_status.auth == TokenStatus.INVALID:
+      raise HttpsError(FunctionsErrorCode.UNAUTHENTICATED, 'Unauthenticated')
+
+    if (token_status.app == TokenStatus.INVALID and
+        not options.allow_invalid_app_check_token):
+      raise HttpsError(FunctionsErrorCode.UNAUTHENTICATED, 'Unauthenticated')
+
+    instance_id = request.headers.get('Firebase-Instance-ID-Token')
+    if instance_id is not None:
+      # Validating the token requires an http request, so we don't do it.
+      # If the user wants to use it for something, it will be validated then.
+      # Currently, the only real use case for this token is for sending
+      # pushes with FCM. In that case, the FCM APIs will validate the token.
+      context = dataclasses.replace(
+          context,
+          instance_id_token=request.headers.get('Firebase-Instance-ID-Token'),
+      )
+
+    data = json.loads(request.data)
+
+    arg: CallableRequest = CallableRequest(
+        raw_request=context.raw_request,
+        data=data,
+        auth=context.auth,
+        app=context.app,
+        instance_id_token=context.instance_id_token,
+    )
+
     result = func(arg)
 
-    response_body = flask.jsonify(data=result, status=200)
-
-    response = response_body
+    response = flask.jsonify(data=result, status=200)
+  # Disable broad exceptions lint since we want to handle all exceptions here
+  # and wrap as an HttpsError.
+  # pylint: disable=broad-except
   except Exception as err:
     if not isinstance(err, HttpsError):
       error('Unhandled error', err)
@@ -418,26 +452,25 @@ def wrap_on_call_handler(
 
     status = err.http_error_code.status
 
-    response_body = flask.jsonify(error=err.to_dict(), status=status)
-
-    response = response_body
+    response = flask.jsonify(error=err.to_dict(), status=status)
 
   return response
 
 
 def on_call(
+    func: Callable[[CallableRequest], Any] = None,
     *,
-    allowed_origins: StringParam = None,
-    allowed_methods: StringParam = None,
-    region: Optional[StringParam] = None,
-    memory: Union[None, IntParam, Sentinel] = None,
-    timeout_sec: Union[None, IntParam, Sentinel] = None,
-    min_instances: Union[None, IntParam, Sentinel] = None,
-    max_instances: Union[None, IntParam, Sentinel] = None,
+    allowed_origins: Union[StringParam, str] = None,
+    allowed_methods: Union[StringParam, str] = None,
+    region: Union[StringParam, str] = None,
+    memory: Union[None, IntParam, int, Sentinel] = None,
+    timeout_sec: Union[None, IntParam, int, Sentinel] = None,
+    min_instances: Union[None, IntParam, int, Sentinel] = None,
+    max_instances: Union[None, IntParam, int, Sentinel] = None,
     vpc: Union[None, VpcOptions, Sentinel] = None,
     ingress: Union[None, IngressSettings, Sentinel] = None,
-    service_account: Union[None, StringParam, Sentinel] = None,
-    secrets: Union[None, List[StringParam], ListParam, Sentinel] = None,
+    service_account: Union[None, StringParam, str, Sentinel] = None,
+    secrets: Union[List[StringParam], SecretParam, Sentinel, None] = None,
 ) -> Callable[[CallableRequest], Any]:
   '''Decorator for a function that can be called like an RPC service.
 
@@ -478,51 +511,39 @@ def on_call(
       secrets=secrets,
   )
 
-  metadata = {} if callable_options is None else callable_options.metadata()
-
-  trigger = {
-      'platform': 'gcfv2',
-      **metadata, 'labels': {
-          'deployment-callable': 'true',
-      },
-      'httpsTrigger': {
-          'allowInsecure': False
-      }
-  }
-
-  metadata['apiVersion'] = 1
-  metadata['trigger'] = {}
+  trigger = {} if callable_options is None else callable_options.metadata()
 
   def wrapper(func):
 
-    metadata['id'] = func.__name__
-
     @functools.wraps(func)
-    def call_view_func(request: FlaskRequest,
-                       response: FlaskResponse = None) -> Any:
+    def call_view_func(request: Request):
       return wrap_on_call_handler(
-          func,
-          request,
-          response if response is not None else FlaskResponse(),
-          callable_options,
+          func=func,
+          request=request,
+          response=Response(),
+          options=callable_options,
       )
 
     manifest = ManifestEndpoint(
-        entryPoint=metadata['id'],
-        region=region,
-        platform='gcfv2',
-        labels={},
-        httpsTrigger={},
-        vpc=vpc,
-        availableMemoryMb=memory.value if memory is not None else None,
-        maxInstances=max_instances,
-        minInstances=min_instances,
+        entryPoint=func.__name__,
+        callableTrigger=CallableTrigger(),
+        region=callable_options.region,
+        availableMemoryMb=callable_options.memory,
+        timeoutSeconds=callable_options.timeout_sec,
+        minInstances=callable_options.min_instances,
+        maxInstances=callable_options.max_instances,
+        vpc=callable_options.vpc,
+        ingressSettings=callable_options.ingress,
+        serviceAccount=callable_options.service_account,
+        secretEnvironmentVariables=callable_options.secrets,
     )
 
-    call_view_func.firebase_metadata = metadata
-    call_view_func.trigger = trigger
-    call_view_func.__endpoint__ = manifest
+    call_view_func.__firebase_trigger__ = trigger
+    call_view_func.__firebase_endpoint__ = manifest
 
     return call_view_func
 
-  return wrapper
+  if func is None:
+    return wrapper
+
+  return wrapper(func)

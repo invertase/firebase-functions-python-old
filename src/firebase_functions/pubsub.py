@@ -1,28 +1,34 @@
-"""Pub/sub trigger for the function to be triggered by Pub/Sub."""
+'''Pub/sub trigger for the function to be triggered by Pub/Sub.'''
 
-import datetime
+import datetime as dt
 import functools
 import os
-from typing import Callable, Generic, TypeVar, Union
-from dataclasses import dataclass
+import flask
 
-from firebase_functions import CloudEvent, options
+from dataclasses import dataclass
+from typing import Any, Callable, Dict, Generic, List, TypeVar, TypedDict, Union
+
+from firebase_functions import CloudEvent
+from firebase_functions.options import PubSubOptions, Sentinel, VpcOptions, Memory, IngressSettings
 from firebase_functions.manifest import EventTrigger, ManifestEndpoint
-from firebase_functions.params import StringParam, IntParam, ListParam
+from firebase_functions.params import SecretParam, StringParam, IntParam
 
 T = TypeVar('T')
+
+Request = flask.Request
+Response = flask.Response
 
 
 @dataclass(frozen=True)
 class Message(Generic[T]):
   message_id: str
-  publish_time: datetime
+  publish_time: dt.datetime
   data: str
   attributes: dict[str, str]
   ordering_key: str
 
   @property
-  def json(self) -> T:
+  def json(self) -> Dict[str, Any]:
     return {
         'message_id': self.message_id,
         'publish_time': self.publish_time,
@@ -35,50 +41,42 @@ class Message(Generic[T]):
 CloudEventMessage = CloudEvent[Message[T]]
 
 
-@dataclass(frozen=True)
-class PubSubFunction(Callable[[CloudEventMessage], None]):
-  '''Function type for https decorators.'''
+class MessagePublishedData(TypedDict):
+  message: object
+  subscription: str
 
-  def __init__(self, message: CloudEventMessage):
-    self.message = message
-    self.__trigger__ = None
-    self.__endpoint__ = None
 
-  @property
-  def trigger(self):
-    return self.__trigger__
+def pubsub_wrap_handler(
+    func: Callable[[CloudEventMessage], None],
+    raw: CloudEvent[Any],
+    options: PubSubOptions,
+) -> Response:
+  message_published_data: CloudEvent[Message[Any]] = raw
 
-  @trigger.setter
-  def trigger(self, v):
-    self.__trigger__ = v
-
-  @property
-  def endpoint(self):
-    return self.__endpoint__
-
-  @endpoint.setter
-  def endpoint(self, v):
-    self.__endpoint__ = v
+  result = func(message_published_data)
+  response = flask.jsonify(data=result, status=200)
+  return response
 
 
 def on_message_published(
+    func: Callable[[CloudEvent], None] = None,
     *,
     topic: str,
-    region: Union[None, str, StringParam, options.Sentinel] = None,
-    memory: Union[None, int, options.Memory, options.Sentinel] = None,
-    timeout_sec: Union[None, int, IntParam, options.Sentinel] = None,
-    min_instances: Union[None, int, IntParam, options.Sentinel] = None,
-    max_instances: Union[None, int, IntParam, options.Sentinel] = None,
-    vpc: Union[None, options.VpcOptions, options.Sentinel] = None,
-    ingress: Union[None, options.IngressSettings, options.Sentinel] = None,
-    service_account: Union[None, str, StringParam, options.Sentinel] = None,
-    secrets: Union[None, list[str], ListParam, options.Sentinel] = None,
-):
-  """
-      Decorator for functions that are triggered by Pub/Sub."""
+    region: Union[None, StringParam, str] = None,
+    memory: Union[None, IntParam, Memory, Sentinel] = None,
+    timeout_sec: Union[None, IntParam, int, Sentinel] = None,
+    min_instances: Union[None, IntParam, int, Sentinel] = None,
+    max_instances: Union[None, IntParam, int, Sentinel] = None,
+    vpc: Union[None, VpcOptions, Sentinel] = None,
+    ingress: Union[None, IngressSettings, Sentinel] = None,
+    service_account: Union[None, StringParam, str, Sentinel] = None,
+    secrets: Union[None, List[StringParam], SecretParam, Sentinel] = None,
+) -> Callable[[CloudEvent], None]:
+  '''
+      Decorator for functions that are triggered by Pub/Sub.'''
 
   # Construct an Options object out from the args passed by the user, if any.
-  pubsub_options = options.PubSubOptions(
+  pubsub_options = PubSubOptions(
       topic=topic,
       region=region,
       memory=memory,
@@ -90,38 +88,46 @@ def on_message_published(
       service_account=service_account,
       secrets=secrets,
   )
-  metadata = {}
-  metadata = {} if pubsub_options is None else pubsub_options.metadata()
 
-  def pubsub_with_topic(func: PubSubFunction):
+  trigger = {} if pubsub_options is None else pubsub_options.metadata()
+
+  def wrapper(func):
 
     @functools.wraps(func)
-    def wrapper_func(*args, **kwargs):
-      return func(*args, **kwargs)
+    def pubsub_view_func(data: CloudEvent[Any]):
+      return pubsub_wrap_handler(
+          func=func,
+          raw=data,
+          options=pubsub_options,
+      )
 
-    metadata['id'] = func.__name__
     project = os.environ.get('GCLOUD_PROJECT')
 
     manifest = ManifestEndpoint(
-        platform='gcfv2',
         entryPoint=func.__name__,
-        region=region,
-        labels={},
-        vpc=vpc,
-        availableMemoryMb=memory.value,
-        maxInstances=max_instances,
-        minInstances=min_instances,
         eventTrigger=EventTrigger(
             eventType='google.cloud.pubsub.topic.v1.messagePublished',
             eventFilters={
                 'topic': f'projects/{project}/topics/{topic}',
             },
         ),
+        region=pubsub_options.region,
+        availableMemoryMb=pubsub_options.memory,
+        timeoutSeconds=pubsub_options.timeout_sec,
+        minInstances=pubsub_options.min_instances,
+        maxInstances=pubsub_options.max_instances,
+        vpc=pubsub_options.vpc,
+        ingressSettings=pubsub_options.ingress,
+        serviceAccount=pubsub_options.service_account,
+        secretEnvironmentVariables=pubsub_options.secrets,
     )
 
-    wrapper_func.firebase_metadata = metadata
-    wrapper_func.__endpoint__ = manifest
+    pubsub_view_func.__firebase_trigger__ = trigger
+    pubsub_view_func.__firebase_endpoint__ = manifest
 
-    return wrapper_func
+    return pubsub_view_func
 
-  return pubsub_with_topic
+  if func is None:
+    return wrapper
+
+  return wrapper(func)
