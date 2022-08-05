@@ -1,4 +1,5 @@
 '''Pub/sub trigger for the function to be triggered by Pub/Sub.'''
+import logging
 import os
 import flask
 import base64
@@ -8,13 +9,20 @@ import datetime as dt
 from dataclasses import dataclass
 from typing import Any, Callable, Dict, Generic, List, TypeVar, Union, Optional
 
-from functions_framework.event_conversion import CloudEvent
-
 from firebase_functions.options import PubSubOptions, Sentinel, VpcOptions, Memory, IngressSettings
 from firebase_functions.manifest import EventTrigger, ManifestEndpoint
 from firebase_functions.params import BoolParam, SecretParam, StringParam, IntParam
 
 T = TypeVar('T')
+
+
+@dataclass()
+class CloudEvent(Generic[T]):
+  specversion: str
+  source: str
+  type: str
+  time: dt.datetime
+  data: T
 
 
 @dataclass(frozen=True)
@@ -37,30 +45,30 @@ class Message(Generic[T]):
 
 
 @dataclass(frozen=True)
-class CloudEventPublishedMessage:
+class MessagePublishedData:
   message: Message[Union[dict, str, None]]
   subscription: str
 
 
 def pubsub_wrap_handler(
-    func: Callable[[CloudEventPublishedMessage], None],
-    raw: CloudEvent,
+    func: Callable[[CloudEvent[MessagePublishedData]], None],
+    raw: dict[str, Any],
 ) -> flask.Response:
 
-  try:
-    data = raw.data
-  except AttributeError:
-    data = raw['data']
+  data = raw['data']
 
   # Decode the message data
   data['message']['data'] = base64.b64decode(
       data['message']['data']).decode('utf-8')
 
-  # Convert the UTC string into a datetime object
-  data['message']['publish_time'] = dt.datetime.strptime(
+  time = dt.datetime.strptime(
       data['message']['publish_time'],
       '%Y-%m-%dT%H:%M:%S.%f%z',
   )
+
+  # Convert the UTC string into a datetime object
+  raw['time'] = time
+  data['message']['publish_time'] = time
 
   # Pop unnecessary keys from the message data
   data['message'].pop('messageId', None)
@@ -70,7 +78,7 @@ def pubsub_wrap_handler(
   # there is no ordering_key in the raw request.
   ordering_key = data['message'].pop('orderingKey', None)
 
-  message: CloudEventPublishedMessage = CloudEventPublishedMessage(
+  message: MessagePublishedData = MessagePublishedData(
       message=Message(
           **data['message'],
           ordering_key=ordering_key,
@@ -78,13 +86,21 @@ def pubsub_wrap_handler(
       subscription=data['subscription'],
   )
 
-  func(message)
+  event: CloudEvent[MessagePublishedData] = CloudEvent(
+      source=raw['source'],
+      specversion=raw['specversion'],
+      type=raw['type'],
+      time=raw['time'],
+      data=message,
+  )
+
+  func(event)
   response = flask.jsonify(status=200)
   return response
 
 
 def on_message_published(
-    func: Callable[[CloudEventPublishedMessage], None] = None,
+    func: Callable[[MessagePublishedData], None] = None,
     *,
     topic: str,
     region: Union[None, StringParam, str] = None,
@@ -97,7 +113,7 @@ def on_message_published(
     service_account: Union[None, StringParam, str, Sentinel] = None,
     secrets: Union[None, List[StringParam], SecretParam, Sentinel] = None,
     retry: Union[None, bool, BoolParam] = None,
-) -> Callable[[CloudEventPublishedMessage], None]:
+) -> Callable[[MessagePublishedData], None]:
   '''
       Decorator for functions that are triggered by Pub/Sub.'''
 
@@ -121,7 +137,7 @@ def on_message_published(
   def wrapper(func):
 
     @functools.wraps(func)
-    def pubsub_view_func(data: CloudEvent):
+    def pubsub_view_func(data: dict[str, Any]):
       return pubsub_wrap_handler(
           func=func,
           raw=data,

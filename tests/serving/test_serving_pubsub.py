@@ -2,26 +2,20 @@ import logging
 import yaml
 
 from firebase_functions import options
-from firebase_functions.pubsub import on_message_published, CloudEventPublishedMessage
+from firebase_functions.pubsub import on_message_published, MessagePublishedData
 from firebase_functions.serving import serve_admin, serve_triggers
 
 from cloudevents.http import to_structured, CloudEvent
 
 LOGGER = logging.getLogger(__name__)
 attributes = {
-    'specversion':
-        '1.0',
-    'id':
-        '5320408004945103',
-    'source':
-        '''pubsub.googleapis.com/projects/
-        python-functions-testing/topics/test-topic''',
-    'type':
-        'google.cloud.pubsub.topic.v1.messagePublished',
-    'datacontenttype':
-        'application/json',
-    'time':
-        '2022-08-05T12:42:07.148Z'
+    'specversion': '1.0',
+    'id': '5320408004945103',
+    'source': 'pubsub.googleapis.com/projects/'
+              'python-functions-testing/topics/test-topic',
+    'type': 'google.cloud.pubsub.topic.v1.messagePublished',
+    'datacontenttype': 'application/json',
+    'time': '2022-08-05T12:42:07.148Z'
 }
 data = {
     'message': {
@@ -31,9 +25,8 @@ data = {
         'publishTime': '2022-08-05T12:42:07.148Z',
         'publish_time': '2022-08-05T12:42:07.148Z'
     },
-    'subscription':
-        '''projects/python-functions-testing/subscriptions/
-        eventarc-us-central1-hellofunctiononmessage-632859-sub-203'''
+    'subscription': 'projects/python-functions-testing/subscriptions/'
+                    'eventarc-us-central1-hellofunctiononmessage-632859-sub-203'
 }
 
 
@@ -43,7 +36,7 @@ data = {
     region='europe-west2',
     ingress=options.USE_DEFAULT,
 )
-def on_message_published_function(event: CloudEventPublishedMessage):
+def on_message_published_function(event: MessagePublishedData):
   LOGGER.debug(event)
 
 
