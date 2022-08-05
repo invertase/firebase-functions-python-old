@@ -47,7 +47,7 @@ class Message(Generic[T]):
     }
 
 
-CloudEventMessage = CloudEvent[Message[T]]
+CloudEventMessage = CloudEvent[Message[str]]
 
 
 class MessagePublishedData(TypedDict):
@@ -59,14 +59,15 @@ def pubsub_wrap_handler(
     func: Callable[[CloudEventMessage], None],
     raw: dict[str, Any],
 ) -> Response:
-  event: CloudEventMessage = CloudEvent(
-      **raw['attributes'],
-      time=dt.datetime.fromisoformat(raw['attributes']['time']),
+  event: CloudEvent[Message[str]] = CloudEvent(
+      **raw,
+      time=dt.datetime.fromisoformat(raw['time']),
       data=Message(
-          **raw['attributes']['data']['message'],
+          **raw['data']['message'],
           publish_time=dt.datetime.fromisoformat(
-              raw['attributes']['data']['message']['publish_time']),
-      ))
+              raw['data']['message']['publish_time']),
+      ),
+  )
 
   func(event)
   response = flask.jsonify(status=200)
