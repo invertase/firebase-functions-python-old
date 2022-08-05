@@ -8,15 +8,24 @@ import flask
 from dataclasses import dataclass
 from typing import Any, Callable, Dict, Generic, List, TypeVar, TypedDict, Union
 
-from firebase_functions import CloudEvent
 from firebase_functions.options import PubSubOptions, Sentinel, VpcOptions, Memory, IngressSettings
 from firebase_functions.manifest import EventTrigger, ManifestEndpoint
-from firebase_functions.params import SecretParam, StringParam, IntParam
+from firebase_functions.params import BoolParam, SecretParam, StringParam, IntParam
 
 T = TypeVar('T')
 
 Request = flask.Request
 Response = flask.Response
+
+
+@dataclass(frozen=True)
+class CloudEvent(Generic[T]):
+  specversion: str
+  source: str
+  subject: str
+  type: str
+  time: dt.datetime
+  data: T
 
 
 @dataclass(frozen=True)
@@ -38,7 +47,7 @@ class Message(Generic[T]):
     }
 
 
-CloudEventMessage = CloudEvent[Message[T]]
+CloudEventMessage = CloudEvent[Message[str]]
 
 
 class MessagePublishedData(TypedDict):
@@ -48,18 +57,25 @@ class MessagePublishedData(TypedDict):
 
 def pubsub_wrap_handler(
     func: Callable[[CloudEventMessage], None],
-    raw: CloudEvent[Any],
-    # options: PubSubOptions,
+    raw: dict[str, Any],
 ) -> Response:
-  message_published_data: CloudEvent[Message[Any]] = raw
+  event: CloudEvent[Message[str]] = CloudEvent(
+      **raw,
+      time=dt.datetime.fromisoformat(raw['time']),
+      data=Message(
+          **raw['data']['message'],
+          publish_time=dt.datetime.fromisoformat(
+              raw['data']['message']['publish_time']),
+      ),
+  )
 
-  result = func(message_published_data)
-  response = flask.jsonify(data=result, status=200)
+  func(event)
+  response = flask.jsonify(status=200)
   return response
 
 
 def on_message_published(
-    func: Callable[[CloudEvent], None] = None,
+    func: Callable[[CloudEventMessage], None] = None,
     *,
     topic: str,
     region: Union[None, StringParam, str] = None,
@@ -71,7 +87,8 @@ def on_message_published(
     ingress: Union[None, IngressSettings, Sentinel] = None,
     service_account: Union[None, StringParam, str, Sentinel] = None,
     secrets: Union[None, List[StringParam], SecretParam, Sentinel] = None,
-) -> Callable[[CloudEvent], None]:
+    retry: Union[None, bool, BoolParam] = None,
+) -> Callable[[CloudEventMessage], None]:
   '''
       Decorator for functions that are triggered by Pub/Sub.'''
 
@@ -87,6 +104,7 @@ def on_message_published(
       ingress=ingress,
       service_account=service_account,
       secrets=secrets,
+      retry=retry,
   )
 
   trigger = {} if pubsub_options is None else pubsub_options.metadata()
@@ -94,12 +112,10 @@ def on_message_published(
   def wrapper(func):
 
     @functools.wraps(func)
-    def pubsub_view_func(data: CloudEvent[Any]):
-      # TODO this is not tested in a real deployment.
+    def pubsub_view_func(data: dict[str, Any]):
       return pubsub_wrap_handler(
           func=func,
           raw=data,
-          # options=pubsub_options,
       )
 
     project = os.environ.get('GCLOUD_PROJECT')
@@ -111,6 +127,7 @@ def on_message_published(
             eventFilters={
                 'topic': f'projects/{project}/topics/{topic}',
             },
+            retry=pubsub_options.retry,
         ),
         region=pubsub_options.region,
         availableMemoryMb=pubsub_options.memory,

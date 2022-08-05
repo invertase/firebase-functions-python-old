@@ -12,7 +12,7 @@ import flask
 from enum import Enum
 from dataclasses import dataclass
 from collections.abc import Callable
-from firebase_admin import auth
+from firebase_admin import auth, _apps
 from typing import (
     Any,
     Generic,
@@ -24,7 +24,6 @@ from typing import (
 
 from functions_framework import logging
 
-from firebase_functions import apps
 from firebase_functions.errors import (FunctionsErrorCode, HttpsError)
 from firebase_functions.manifest import (
     CallableTrigger,
@@ -274,7 +273,7 @@ def check_auth_token(req: Request, ctx: CallableRequest) -> TokenStatus:
     try:
       id_token = match.string
       auth_token: dict[str, str] = {}
-      auth.verify_id_token(id_token, app=apps())
+      auth.verify_id_token(id_token, app=_apps)
 
       ctx = dataclasses.replace(
           ctx,
