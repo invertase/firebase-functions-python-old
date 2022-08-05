@@ -9,6 +9,8 @@ import base64
 from dataclasses import dataclass
 from typing import Any, Callable, Dict, Generic, List, TypeVar, Union, Optional
 
+from functions_framework.event_conversion import CloudEvent
+
 from firebase_functions.options import PubSubOptions, Sentinel, VpcOptions, Memory, IngressSettings
 from firebase_functions.manifest import EventTrigger, ManifestEndpoint
 from firebase_functions.params import BoolParam, SecretParam, StringParam, IntParam
@@ -17,16 +19,6 @@ T = TypeVar('T')
 
 Request = flask.Request
 Response = flask.Response
-
-
-@dataclass(frozen=True)
-class CloudEvent(Generic[T]):
-  data: T
-  specversion: Optional[str] = None
-  source: Optional[str] = None
-  subject: Optional[str] = None
-  type: Optional[str] = None
-  time: Optional[dt.datetime] = None
 
 
 @dataclass(frozen=True)
@@ -48,9 +40,6 @@ class Message(Generic[T]):
     }
 
 
-CloudEventMessage = CloudEvent[Message[str]]
-
-
 @dataclass(frozen=True)
 class CloudEventPublishedMessage:
   message: Message[Union[dict, str, None]]
@@ -59,7 +48,7 @@ class CloudEventPublishedMessage:
 
 def pubsub_wrap_handler(
     func: Callable[[CloudEventPublishedMessage], None],
-    raw: CloudEvent[dict],
+    raw: CloudEvent,
 ) -> Response:
 
   # Decode the message data
@@ -131,7 +120,7 @@ def on_message_published(
   def wrapper(func):
 
     @functools.wraps(func)
-    def pubsub_view_func(data: CloudEvent[dict]):
+    def pubsub_view_func(data: CloudEvent):
       return pubsub_wrap_handler(
           func=func,
           raw=data,
