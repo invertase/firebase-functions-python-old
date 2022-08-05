@@ -52,10 +52,11 @@ class MessagePublishedData:
 
 def pubsub_wrap_handler(
     func: Callable[[CloudEvent[MessagePublishedData]], None],
-    raw: dict[str, Any],
+    raw: CloudEvent[Any],
 ) -> flask.Response:
+  logging.getLogger(__name__).debug(raw)
 
-  data = raw['data']
+  data = raw.data
 
   # Decode the message data
   data['message']['data'] = base64.b64decode(
@@ -67,7 +68,7 @@ def pubsub_wrap_handler(
   )
 
   # Convert the UTC string into a datetime object
-  raw['time'] = time
+  raw.time = time
   data['message']['publish_time'] = time
 
   # Pop unnecessary keys from the message data
@@ -87,10 +88,10 @@ def pubsub_wrap_handler(
   )
 
   event: CloudEvent[MessagePublishedData] = CloudEvent(
-      source=raw['source'],
-      specversion=raw['specversion'],
-      type=raw['type'],
-      time=raw['time'],
+      source=raw.source,
+      specversion=raw.specversion,
+      type=raw.type,
+      time=raw.time,
       data=message,
   )
 
@@ -137,7 +138,7 @@ def on_message_published(
   def wrapper(func):
 
     @functools.wraps(func)
-    def pubsub_view_func(data: dict[str, Any]):
+    def pubsub_view_func(data: CloudEvent[Any]):
       return pubsub_wrap_handler(
           func=func,
           raw=data,
