@@ -19,7 +19,7 @@ T = TypeVar('T')
 @dataclass()
 class CloudEvent(Generic[T]):
   specversion: str
-  source: str
+  # source: str
   type: str
   time: dt.datetime
   data: T
@@ -88,7 +88,6 @@ def pubsub_wrap_handler(
   )
 
   event: CloudEvent[MessagePublishedData] = CloudEvent(
-      source=raw.source,
       specversion=raw.specversion,
       type=raw.type,
       time=raw.time,
