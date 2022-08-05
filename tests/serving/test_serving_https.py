@@ -47,7 +47,7 @@ def http_callable_function(req):
     return 'Hello World, again!'
 
 
-triggers = {'http_request_function': http_request_function, 'http_callable_function': http_callable_function}
+triggers: dict = {'http_request_function': http_request_function, 'http_callable_function': http_callable_function}
 
 
 def test_admin_view_func():
@@ -58,8 +58,7 @@ def test_admin_view_func():
         res = client.get('/__/functions.yaml')
         assert res.status_code == 200, 'response failure, status_code != 200 '
         result = yaml.safe_load(res.get_data())
-        assert result['endpoints']['httprequestfunction'][
-                   'httpsTrigger'] is not None, 'Failure, httpsTrigger is none'
+        assert result['endpoints']['httprequestfunction']['httpsTrigger'] is not None, 'Failure, httpsTrigger is none'
         assert result['endpoints']['httpcallablefunction'][
                    'callableTrigger'] is not None, 'Failure, callableTrigger is none'
 
@@ -104,18 +103,15 @@ def test_quit_view_func():
     Function tests for quit view function response
     """
     with serve_admin(triggers=triggers).test_client() as client:
-        res = client.get('/__/quitquitquit')
-        assert res.status_code == 200, 'response failure, status_code != 200'
+        assert client.get('/__/quitquitquit').status_code == 200, 'response failure, status_code != 200'
 
 
 def test_asdict_factory_cleanup():
     """
-    Function tests fo factory cleanups as dictionaries
+    Function tests factory cleanups as dictionaries
     """
-    endpoints = {}
-
-    for name, trigger in triggers.items():
-        endpoints[name.replace('_', '').lower()] = trigger.__firebase_endpoint__
+    endpoints: dict = {name.replace('_', '').lower(): trigger.__firebase_endpoint__
+                       for name, trigger in triggers.items()}
 
     manifest = dataclasses.asdict(
         Manifest(endpoints=endpoints),

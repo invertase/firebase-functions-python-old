@@ -18,9 +18,7 @@ def uknown_function():
   pass
 
 
-triggers = {}
-
-triggers['uknown_function'] = uknown_function
+triggers: dict = {'uknown_function': uknown_function}
 
 
 def test_spec_unkown():

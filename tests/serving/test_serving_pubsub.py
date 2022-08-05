@@ -16,29 +16,23 @@ LOGGER = logging.getLogger(__name__)
     ingress=options.USE_DEFAULT,
 )
 def on_message_published_function(event: CloudEvent):
-  LOGGER.debug(event)
+    LOGGER.debug(event)
 
 
-triggers = {}
-triggers['on_message_published_function'] = on_message_published_function
+triggers: dict = {'on_message_published_function': on_message_published_function}
 
 
 def test_sepc_pubsub():
-  with serve_admin(triggers=triggers).test_client() as client:
-    res = client.get('/__/functions.yaml')
-    assert res.status_code == 200
-    result = yaml.safe_load(res.get_data())
-    assert result['endpoints']['onmessagepublishedfunction'][
-        'eventTrigger'] is not None
+    with serve_admin(triggers=triggers).test_client() as client:
+        res = client.get('/__/functions.yaml')
+        assert res.status_code == 200
+        assert yaml.safe_load(res.get_data())['endpoints']['onmessagepublishedfunction']['eventTrigger'] is not None
 
 
 def test_trigger_pubsub():
-
-  with serve_triggers(triggers=triggers).test_client() as client:
-    res_call = client.post(
-        '/on_message_published_function',
-        data=json.dumps({'foo': 'bar_pub_sub'}),
-        content_type='application/json',
-    )
-
-    LOGGER.debug(res_call)
+    with serve_triggers(triggers=triggers).test_client() as client:
+        LOGGER.debug(client.post(
+            '/on_message_published_function',
+            data=json.dumps({'foo': 'bar_pub_sub'}),
+            content_type='application/json'
+        ))
