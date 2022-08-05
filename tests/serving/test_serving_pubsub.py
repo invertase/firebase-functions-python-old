@@ -16,6 +16,7 @@ LOGGER = logging.getLogger(__name__)
     ingress=options.USE_DEFAULT,
 )
 def on_message_published_function(event: CloudEvent):
+    """Take on message published event"""
     LOGGER.debug(event)
 
 
@@ -23,13 +24,16 @@ triggers: dict = {'on_message_published_function': on_message_published_function
 
 
 def test_sepc_pubsub():
+    """Tests for pubsub specification"""
     with serve_admin(triggers=triggers).test_client() as client:
         res = client.get('/__/functions.yaml')
         assert res.status_code == 200
-        assert yaml.safe_load(res.get_data())['endpoints']['onmessagepublishedfunction']['eventTrigger'] is not None
+        assert yaml.safe_load(res.get_data())['endpoints']['onmessagepublishedfunction']['eventTrigger'] is not None, \
+            'Failure, eventTrigger is none '
 
 
 def test_trigger_pubsub():
+    """Tests for pubsub trigger"""
     with serve_triggers(triggers=triggers).test_client() as client:
         LOGGER.debug(client.post(
             '/on_message_published_function',
