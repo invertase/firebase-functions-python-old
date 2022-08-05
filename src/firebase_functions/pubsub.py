@@ -1,10 +1,9 @@
 '''Pub/sub trigger for the function to be triggered by Pub/Sub.'''
-
-import datetime as dt
-import functools
 import os
 import flask
 import base64
+import functools
+import datetime as dt
 
 from dataclasses import dataclass
 from typing import Any, Callable, Dict, Generic, List, TypeVar, Union, Optional
@@ -16,9 +15,6 @@ from firebase_functions.manifest import EventTrigger, ManifestEndpoint
 from firebase_functions.params import BoolParam, SecretParam, StringParam, IntParam
 
 T = TypeVar('T')
-
-Request = flask.Request
-Response = flask.Response
 
 
 @dataclass(frozen=True)
@@ -49,32 +45,37 @@ class CloudEventPublishedMessage:
 def pubsub_wrap_handler(
     func: Callable[[CloudEventPublishedMessage], None],
     raw: CloudEvent,
-) -> Response:
+) -> flask.Response:
+
+  try:
+    data = raw.data
+  except AttributeError:
+    data = raw['data']
 
   # Decode the message data
-  raw.data['message']['data'] = base64.b64decode(
-      raw.data['message']['data']).decode('utf-8')
+  data['message']['data'] = base64.b64decode(
+      data['message']['data']).decode('utf-8')
 
   # Convert the UTC string into a datetime object
-  raw.data['message']['publish_time'] = dt.datetime.strptime(
-      raw.data['message']['publish_time'],
+  data['message']['publish_time'] = dt.datetime.strptime(
+      data['message']['publish_time'],
       '%Y-%m-%dT%H:%M:%S.%f%z',
   )
 
   # Pop unnecessary keys from the message data
-  raw.data['message'].pop('messageId', None)
-  raw.data['message'].pop('publishTime', None)
+  data['message'].pop('messageId', None)
+  data['message'].pop('publishTime', None)
 
   # `orderingKey` doesn't come with a snake case alternative,
   # there is no ordering_key in the raw request.
-  ordering_key = raw.data['message'].pop('orderingKey', None)
+  ordering_key = data['message'].pop('orderingKey', None)
 
   message: CloudEventPublishedMessage = CloudEventPublishedMessage(
       message=Message(
-          **raw.data['message'],
+          **data['message'],
           ordering_key=ordering_key,
       ),
-      subscription=raw.data['subscription'],
+      subscription=data['subscription'],
   )
 
   func(message)
