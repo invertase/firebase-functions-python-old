@@ -30,14 +30,17 @@ class CloudEvent(Generic[T]):
 class Message(Generic[T]):
   message_id: str
   publish_time: dt.datetime
-  data: str
+  data: Optional[str] = None
   attributes: Optional[dict[str, str]] = None
   ordering_key: Optional[str] = None
 
   @property
-  def json(self) -> T:
+  def json(self) -> Optional[T]:
     try:
-      return json.loads(base64.b64decode(self.data).decode('utf-8'))
+      if self.data is not None:
+        return json.loads(base64.b64decode(self.data).decode('utf-8'))
+      else:
+        return None
     except Exception as e:
       print(e)
       raise Exception(
