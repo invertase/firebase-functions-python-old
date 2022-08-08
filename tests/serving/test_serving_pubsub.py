@@ -1,8 +1,9 @@
 import logging
 import yaml
+import datetime as dt
 
 from firebase_functions import options
-from firebase_functions.pubsub import on_message_published, CloudEvent, MessagePublishedData
+from firebase_functions.pubsub import Message, on_message_published, CloudEvent, MessagePublishedData
 from firebase_functions.serving import serve_admin, serve_triggers
 
 import cloudevents.http
@@ -37,6 +38,12 @@ data = {
     ingress=options.USE_DEFAULT,
 )
 def on_message_published_function(event: CloudEvent[MessagePublishedData]):
+  assert isinstance(event.time, dt.datetime), \
+    'Event time is a datetime object'
+  assert event.time.date() == dt.date(2022, 8, 5), \
+    'Event date matches expected date'
+  assert isinstance(event.data.message, Message), \
+    'Event data is a Message object'
   assert event.data.message.json == {'data': 'Hello world'}, \
     'Message data is a dict'
 
