@@ -42,7 +42,6 @@ class Message(Generic[T]):
       else:
         return None
     except Exception as e:
-      print(e)
       raise Exception(
           f'Unable to parse Pub/Sub message data as JSON: {e}') from e
 
