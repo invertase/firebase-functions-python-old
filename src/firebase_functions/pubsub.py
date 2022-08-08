@@ -61,8 +61,8 @@ class Message(Generic[T]):
 
 
 @dataclass(frozen=True)
-class MessagePublishedData:
-  message: Message[Union[dict, str, None]]
+class MessagePublishedData(T):
+  message: Message[T]
   subscription: str
 
 
