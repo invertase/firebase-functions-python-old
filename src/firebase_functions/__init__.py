@@ -1,3 +1,3 @@
-'''
+"""
 Firebase Functions for Python.
-'''
+"""

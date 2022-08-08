@@ -1,3 +1,4 @@
+"""Tests serving unknown triggers"""
 import json
 
 import pytest
@@ -6,36 +7,38 @@ from firebase_functions.manifest import ManifestEndpoint
 from firebase_functions.serving import serve_admin, serve_triggers
 
 
-def uknown_trigger(func):
-
-  func.__firebase_endpoint__ = ManifestEndpoint(entryPoint=func.__name__)
-
-  return func
-
-
-@uknown_trigger
-def uknown_function():
-  pass
+def unknown_trigger(func):
+    """Makes "unknown_trigger" decorator"""
+    func.__firebase_endpoint__ = ManifestEndpoint(entryPoint=func.__name__)
+    return func
 
 
-triggers = {}
-
-triggers['uknown_function'] = uknown_function
-
-
-def test_spec_unkown():
-  with serve_admin(triggers=triggers).test_client() as client:
-    res = client.get('/__/functions.yaml')
-    res = yaml.safe_load(res.get_data())
-    assert 'uknownfunction' not in res['endpoints']
+@unknown_trigger
+def unknown_function():
+    """Makes 'unknown_function'"""
 
 
-def test_unkown_trigger_type():
-  with pytest.raises(ValueError):
-    with serve_triggers(triggers=triggers).test_client() as client:
-      client.post(
-          '/unknown_function',
-          data=json.dumps({'data': 'bar'}),
-          headers={'Authorization': 'bar'},
-          content_type='application/json',
-      )
+triggers: dict = {"unknown_function": unknown_function}
+
+
+def test_spec_unknown():
+    """Test unknown specification"""
+    with serve_admin(triggers=triggers).test_client() as client:
+        assert (
+            "uknownfunction"
+            not in yaml.safe_load(client.get("/__/functions.yaml").get_data())[
+                "endpoints"
+            ]
+        ), "Failure, function is known"
+
+
+def test_unknown_trigger_type():
+    """Test unknown trigger type"""
+    with pytest.raises(ValueError):
+        with serve_triggers(triggers=triggers).test_client() as client:
+            client.post(
+                "/unknown_function",
+                data=json.dumps({"data": "bar"}),
+                headers={"Authorization": "bar"},
+                content_type="application/json",
+            )
