@@ -53,9 +53,9 @@ class Message(Generic[T]):
         'publish_time': self.publish_time,
     }
 
-    if self.attributes:
+    if self.attributes is not None:
       dict_message['attributes'] = self.attributes
-    if self.ordering_key:
+    if self.ordering_key is not None:
       dict_message['ordering_key'] = self.ordering_key
 
     return dict_message
@@ -186,7 +186,4 @@ def on_message_published(
 
     return pubsub_view_func
 
-  if func is None:
-    return wrapper
-
-  return wrapper(func)
+  return wrapper
