@@ -4,7 +4,6 @@ Test the functions that serve the admin and triggers.
 
 import dataclasses
 import json
-import logging
 import os
 import pytest
 import yaml
@@ -13,8 +12,6 @@ from firebase_functions import options
 from firebase_functions.https import Response, on_call, on_request
 from firebase_functions.manifest import Manifest
 from firebase_functions.serving import clean_nones_and_set_defult, serve_admin, serve_triggers
-
-LOGGER = logging.getLogger(__name__)
 
 # Environment variable used for pubsub topic name.
 os.environ['GCLOUD_PROJECT'] = 'test-project'
@@ -30,14 +27,12 @@ os.environ['GCLOUD_PROJECT'] = 'test-project'
         egress_settings=options.VpcEgressSettings.ALL_TRAFFIC,
     ),
 )
-def http_request_function(req, res: Response):
-  LOGGER.debug(req.data.decode('utf-8'))
+def http_request_function(_, res: Response):
   res.set_data('Hello World!')
 
 
 @on_call(memory=options.Memory.MB_256)
-def http_callable_function(req):
-  LOGGER.debug(req.data)
+def http_callable_function(_):
   return 'Hello World, again!'
 
 

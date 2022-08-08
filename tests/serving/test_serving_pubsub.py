@@ -2,10 +2,10 @@ import logging
 import yaml
 
 from firebase_functions import options
-from firebase_functions.pubsub import on_message_published, MessagePublishedData
+from firebase_functions.pubsub import on_message_published, CloudEvent, MessagePublishedData
 from firebase_functions.serving import serve_admin, serve_triggers
 
-from cloudevents.http import to_structured, CloudEvent
+import cloudevents.http
 
 LOGGER = logging.getLogger(__name__)
 attributes = {
@@ -19,7 +19,7 @@ attributes = {
 }
 data = {
     'message': {
-        'data': 'aGVsbG8=',
+        'data': 'eyJkYXRhIjogIkhlbGxvIHdvcmxkIn0=',
         'messageId': '5320408004945103',
         'message_id': '5320408004945103',
         'publishTime': '2022-08-05T12:42:07.148Z',
@@ -36,8 +36,9 @@ data = {
     region='europe-west2',
     ingress=options.USE_DEFAULT,
 )
-def on_message_published_function(event: MessagePublishedData):
-  LOGGER.debug(event)
+def on_message_published_function(event: CloudEvent[MessagePublishedData]):
+  assert event.data.message.json == {'data': 'Hello world'}, \
+    'Message data is a dict'
 
 
 triggers = {}
@@ -56,8 +57,8 @@ def test_sepc_pubsub():
 def test_trigger_pubsub():
 
   with serve_triggers(triggers=triggers).test_client() as client:
-    event = CloudEvent(attributes, data)
-    headers, body = to_structured(event)
+    event = cloudevents.http.CloudEvent(attributes, data)
+    headers, body = cloudevents.http.to_structured(event)
 
     res_call = client.post(
         '/on_message_published_function',
@@ -65,4 +66,5 @@ def test_trigger_pubsub():
         headers=headers,
     )
 
-    assert res_call.status_code == 200
+    assert res_call.status_code == 200, \
+      'Response status code is 200'

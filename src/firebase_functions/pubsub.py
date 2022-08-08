@@ -1,5 +1,6 @@
 '''Pub/sub trigger for the function to be triggered by Pub/Sub.'''
-import logging
+
+import json
 import os
 import flask
 import base64
@@ -7,7 +8,7 @@ import functools
 import datetime as dt
 
 from dataclasses import dataclass
-from typing import Any, Callable, Dict, Generic, List, TypeVar, Union, Optional
+from typing import Any, Callable, Generic, List, TypeVar, Union, Optional
 
 from firebase_functions.options import PubSubOptions, Sentinel, VpcOptions, Memory, IngressSettings
 from firebase_functions.manifest import EventTrigger, ManifestEndpoint
@@ -29,19 +30,32 @@ class CloudEvent(Generic[T]):
 class Message(Generic[T]):
   message_id: str
   publish_time: dt.datetime
-  data: T
+  data: str
   attributes: Optional[dict[str, str]] = None
   ordering_key: Optional[str] = None
 
   @property
-  def json(self) -> Dict[str, Any]:
-    return {
+  def json(self) -> T:
+    try:
+      return json.loads(base64.b64decode(self.data).decode('utf-8'))
+    except Exception as e:
+      print(e)
+      raise Exception(
+          f'Unable to parse Pub/Sub message data as JSON: {e}') from e
+
+  def asdict(self) -> dict[str, Any]:
+    dict_message: dict[str, Any] = {
         'message_id': self.message_id,
-        'publish_time': self.publish_time,
         'data': self.data,
-        'attributes': self.attributes,
-        'ordering_key': self.ordering_key,
+        'publish_time': self.publish_time,
     }
+
+    if self.attributes:
+      dict_message['attributes'] = self.attributes
+    if self.ordering_key:
+      dict_message['ordering_key'] = self.ordering_key
+
+    return dict_message
 
 
 @dataclass(frozen=True)
@@ -54,13 +68,11 @@ def pubsub_wrap_handler(
     func: Callable[[CloudEvent[MessagePublishedData]], None],
     raw: CloudEvent[Any],
 ) -> flask.Response:
-  logging.getLogger(__name__).debug(raw)
+  if isinstance(raw, dict):
+    raw = CloudEvent(
+        **{k: v for k, v in raw.items() if k in CloudEvent.__annotations__})
 
   data = raw.data
-
-  # Decode the message data
-  data['message']['data'] = base64.b64decode(
-      data['message']['data']).decode('utf-8')
 
   time = dt.datetime.strptime(
       data['message']['publish_time'],
@@ -87,14 +99,9 @@ def pubsub_wrap_handler(
       subscription=data['subscription'],
   )
 
-  event: CloudEvent[MessagePublishedData] = CloudEvent(
-      specversion=raw.specversion,
-      type=raw.type,
-      time=raw.time,
-      data=message,
-  )
+  raw.data = message
 
-  func(event)
+  func(raw)
   response = flask.jsonify(status=200)
   return response
 
