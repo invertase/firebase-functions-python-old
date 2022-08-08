@@ -61,7 +61,7 @@ class Message(Generic[T]):
 
 
 @dataclass(frozen=True)
-class MessagePublishedData(T):
+class MessagePublishedData(Generic[T]):
   message: Message[T]
   subscription: str
 
