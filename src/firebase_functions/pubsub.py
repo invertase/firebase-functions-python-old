@@ -67,7 +67,7 @@ class MessagePublishedData(T):
 
 
 def pubsub_wrap_handler(
-    func: Callable[[CloudEvent[MessagePublishedData]], None],
+    func: Callable[[CloudEvent[MessagePublishedData[T]]], None],
     raw: CloudEvent[Any],
 ) -> flask.Response:
   if isinstance(raw, dict):
