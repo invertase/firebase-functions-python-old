@@ -105,7 +105,7 @@ def pubsub_wrap_handler(
   event: CloudEvent[MessagePublishedData] = CloudEvent(
       data=message,
       time=time,
-      specversion=raw.specversion,
+      specversion=raw.specversion if hasattr(raw, 'specversion') else '1.0',
       type=raw.type,
       source=raw.source,
   )
