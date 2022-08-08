@@ -148,7 +148,7 @@ def test_https_on_request_function_endpoint():
     ), "Failure, endpoint httpsTrigger is not none"
 
 
-#TODO add to test_utils
+# TODO add to test_utils
 def test_https_on_request_function_trigger_metadata():
     """Test https_on_request function trigger metadata is correctly attached."""
     trigger = https_on_request_function.__firebase_trigger__

@@ -133,7 +133,7 @@ def test_on_message_published_function_endpoint():
     assert endpoint.httpsTrigger is None, "Failure, endpoint.httpsTrigger is not None"
 
 
-#TODO add to test_utils
+# TODO add to test_utils
 def test_on_message_published_function_trigger_metadata():
     """Test on_message_published function trigger metadata is correctly attached."""
     trigger = on_message_published_function.__firebase_trigger__
