@@ -17,10 +17,10 @@ from firebase_functions.params import BoolParam, SecretParam, StringParam, IntPa
 T = TypeVar('T')
 
 
-@dataclass()
+@dataclass(frozen=True)
 class CloudEvent(Generic[T]):
   specversion: str
-  # source: str
+  source: str
   type: str
   time: dt.datetime
   data: T
@@ -80,10 +80,10 @@ def pubsub_wrap_handler(
   )
 
   # Convert the UTC string into a datetime object
-  raw.time = time
   data['message']['publish_time'] = time
 
   # Pop unnecessary keys from the message data
+  # (we get these keys from the snake case alternatives that are provided)
   data['message'].pop('messageId', None)
   data['message'].pop('publishTime', None)
 
@@ -99,9 +99,15 @@ def pubsub_wrap_handler(
       subscription=data['subscription'],
   )
 
-  raw.data = message
+  event: CloudEvent[MessagePublishedData] = CloudEvent(
+      data=message,
+      time=time,
+      specversion=raw.specversion,
+      type=raw.type,
+      source=raw.source,
+  )
 
-  func(raw)
+  func(event)
   response = flask.jsonify(status=200)
   return response
 
