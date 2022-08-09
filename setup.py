@@ -12,11 +12,11 @@ setup(
     install_requires=install_requires,
     packages=find_packages(where='src'),
     package_dir={'': 'src'},
-    python_requires='>=3.9',
+    python_requires='>=3.10',
     classifiers=[
         'Development Status :: 1 - Planning',
         'Intended Audience :: Developers',
         'Topic :: Software Development :: Build Tools',
-        'Programming Language :: Python :: 3.9',
+        'Programming Language :: Python :: 3.10',
     ],
 )
