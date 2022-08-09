@@ -2,7 +2,8 @@
 FloatParam unit tests.
 """
 import os
-import firebase_functions.params as params
+
+from src.firebase_functions import params
 
 
 def test_float_param_value():
