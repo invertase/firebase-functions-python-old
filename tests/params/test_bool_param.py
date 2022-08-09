@@ -4,7 +4,8 @@ BoolParam unit tests.
 import os
 
 import pytest
-import firebase_functions.params as params
+
+from src.firebase_functions import params
 
 
 def test_bool_param_value_true():
@@ -15,7 +16,7 @@ def test_bool_param_value_true():
     for value in valid_truthy_values:
         os.environ["bool_value_test"] = value
         param = params.BoolParam("bool_value_test")
-        assert param.value() == True
+        assert param.value() is True
 
 
 def test_bool_param_value_false():
@@ -26,7 +27,7 @@ def test_bool_param_value_false():
     for value in valid_falsey_values:
         os.environ["bool_value_test"] = value
         param = params.BoolParam("bool_value_test")
-        assert param.value() == False
+        assert param.value() is False
 
 
 def test_bool_param_value_error():
@@ -45,7 +46,7 @@ def test_bool_param_empty_default():
     """
     param = params.BoolParam("bool_default_test")
     print(param.value())
-    assert param.value() == False
+    assert param.value() is False
 
 
 def test_bool_param_default():
@@ -57,10 +58,10 @@ def test_bool_param_default():
         # TODO accepts any value for default, but should only accept True or False
         default=False,
     )
-    assert param.value() == False
+    assert param.value() is False
     param = params.BoolParam(
         "bool_default_test",
         # TODO accepts any value for default, but should only accept True or False
         default=True,
     )
-    assert param.value() == True
+    assert param.value() is True

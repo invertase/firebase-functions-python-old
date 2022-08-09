@@ -2,7 +2,8 @@
 IntParam unit tests.
 """
 import os
-import src.firebase_functions.params as params
+
+from src.firebase_functions import params
 
 
 def test_int_param_value():

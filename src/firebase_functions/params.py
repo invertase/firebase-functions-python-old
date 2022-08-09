@@ -112,6 +112,10 @@ class Expression(abc.ABC, Generic[E]):
 
 @dataclass(frozen=True)
 class _IfThenExpression(Expression[E]):
+    """
+    An expression that returns the value of the first expression if the
+    condition is true, otherwise the value of the second expression.
+    """
     condition: Expression[bool]
     then_val: E
     else_val: E
@@ -137,7 +141,9 @@ class BoolExpression(Expression[bool]):
         pass
 
     def then(self, then_val: E, else_val: E) -> Expression[E]:
-        return _IfThenExpression(condition=self, then_val=then_val, else_val=else_val)
+        return _IfThenExpression(condition=self,
+                                 then_val=then_val,
+                                 else_val=else_val)
 
 
 @dataclass(frozen=True)
@@ -311,11 +317,12 @@ class SecretParam:
         return str(os.environ.get(self.name) or self.default or "")
 
 
-PROJECT_ID = StringParam("GCLOUD_PROJECT", description="The active Firebase project")
+PROJECT_ID = StringParam("GCLOUD_PROJECT",
+                         description="The active Firebase project")
 
 STORAGE_BUCKET = StringParam(
-    "STORAGE_BUCKET", description="The default Cloud Storage for Firebase bucket"
-)
+    "STORAGE_BUCKET",
+    description="The default Cloud Storage for Firebase bucket")
 
 DATABASE_URL = StringParam(
     "DATABASE_URL",
