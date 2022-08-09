@@ -34,6 +34,9 @@ class CloudEvent(Generic[T]):
 
 @dataclass(frozen=True)
 class Message(Generic[T]):
+    """
+    Wrapper around a Pub/Sub message.
+    """
     message_id: str
     publish_time: dt.datetime
     data: Optional[str] = None

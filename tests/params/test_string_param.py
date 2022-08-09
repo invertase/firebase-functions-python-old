@@ -2,7 +2,8 @@
 StringParam unit tests.
 """
 import os
-import firebase_functions.params as params
+
+from src.firebase_functions import params
 
 
 def test_string_param_value():
@@ -26,7 +27,6 @@ def test_string_param_default():
     """
     Testing if string param defaults to provided default value.
     """
-    param = params.StringParam(
-        "string_default_test", default="string_overriden_default"
-    )
+    param = params.StringParam("string_default_test",
+                               default="string_overriden_default")
     assert param.value() == "string_overriden_default"

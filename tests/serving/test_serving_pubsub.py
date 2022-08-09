@@ -1,3 +1,7 @@
+"""
+Unit tests for Pub/Sub triggers.
+"""
+
 import logging
 import yaml
 import pytest

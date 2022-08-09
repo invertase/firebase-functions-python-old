@@ -112,6 +112,10 @@ class Expression(abc.ABC, Generic[E]):
 
 @dataclass(frozen=True)
 class _IfThenExpression(Expression[E]):
+    """
+    An expression that returns the value of the first expression if the
+    condition is true, otherwise the value of the second expression.
+    """
     condition: Expression[bool]
     then_val: E
     else_val: E
