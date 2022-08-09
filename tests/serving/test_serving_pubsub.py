@@ -126,12 +126,16 @@ triggers['on_message_published_function_data_is_not_parsable'] = \
 
 
 def test_sepc_pubsub():
-  with serve_admin(triggers=triggers).test_client() as client:
-    res = client.get('/__/functions.yaml')
-    assert res.status_code == 200
-    result = yaml.safe_load(res.get_data())
-    assert result['endpoints']['onmessagepublishedfunction'][
-        'eventTrigger'] is not None
+    """Tests for pubsub specification"""
+    with serve_admin(triggers=triggers).test_client() as client:
+        res = client.get("/__/functions.yaml")
+        assert res.status_code == 200, "Failure, response status code !=200"
+        assert (
+            yaml.safe_load(res.get_data())["endpoints"]["onmessagepublishedfunction"][
+                "eventTrigger"
+            ]
+            is not None
+        ), "Failure, eventTrigger is none "
 
 
 def test_trigger_pubsub():
