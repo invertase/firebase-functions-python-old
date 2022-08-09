@@ -164,7 +164,7 @@ def on_message_published(
     def wrapper(func):
 
         @functools.wraps(func)
-        def pubsub_view_func(data: CloudEvent[Any]):
+        def pubsub_view_func(data: ce.CloudEvent):
             return pubsub_wrap_handler(
                 func=func,
                 raw=data,
