@@ -88,6 +88,7 @@ def pubsub_wrap_handler(
     if isinstance(raw, dict):
         raw = ce.from_json(json.dumps(raw))
 
+    # pylint: disable=protected-access
     event_dict = {"data": raw.data, **raw._attributes}
 
     data = event_dict["data"]
@@ -134,7 +135,7 @@ def pubsub_wrap_handler(
 
 
 def on_message_published(
-    func: Callable[[MessagePublishedData[T]], None] = None,
+    func: Callable[[CloudEvent[MessagePublishedData[T]]], None] = None,
     *,
     topic: str,
     region: Union[None, StringParam, str] = None,
@@ -147,7 +148,7 @@ def on_message_published(
     service_account: Union[None, StringParam, str, Sentinel] = None,
     secrets: Union[None, List[StringParam], SecretParam, Sentinel] = None,
     retry: Union[None, bool, BoolParam] = None,
-) -> Callable[[MessagePublishedData[T]], None]:
+) -> Callable[[CloudEvent[MessagePublishedData[T]]], None]:
     """
         Decorator for functions that are triggered by Pub/Sub."""
 
