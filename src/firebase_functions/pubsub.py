@@ -84,7 +84,7 @@ def pubsub_wrap_handler(
     raw: ce.CloudEvent,
 ) -> flask.Response:
     if isinstance(raw, ce.CloudEvent):
-        event_dict = {**raw}
+        event_dict = {"data": raw.data, **raw._attributes}
     else:
         event_dict = raw
 
