@@ -81,24 +81,31 @@ class MessagePublishedData(Generic[T]):
 
 def pubsub_wrap_handler(
     func: Callable[[CloudEvent[MessagePublishedData[T]]], None],
-    raw: ce.CloudEvent,
+    raw: Union[ce.CloudEvent, dict],
 ) -> flask.Response:
-    if isinstance(raw, ce.CloudEvent):
-        event_dict = {"data": raw.data, **raw._attributes}
-    else:
-        event_dict = raw
+    # If the call is coming from tests, the raw comes through as a dict,
+    # therefore we need to convert it to a CloudEvent.
+    if isinstance(raw, dict):
+        raw = ce.from_json(json.dumps(raw))
+
+    event_dict = {"data": raw.data, **raw._attributes}
 
     data = event_dict["data"]
     message_dict = data["message"]
 
     time = dt.datetime.strptime(
+        event_dict["time"],
+        "%Y-%m-%dT%H:%M:%S.%f%z",
+    )
+
+    publish_time = dt.datetime.strptime(
         message_dict["publish_time"],
         "%Y-%m-%dT%H:%M:%S.%f%z",
     )
 
     # Convert the UTC string into a datetime object
     event_dict["time"] = time
-    message_dict["publish_time"] = time
+    message_dict["publish_time"] = publish_time
 
     # Pop unnecessary keys from the message data
     # (we get these keys from the snake case alternatives that are provided)
