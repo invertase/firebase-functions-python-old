@@ -1,10 +1,4 @@
+Flask>=2.2.2
+PyYAML>=6.0
 pytest>=7.1.2
-pytest-cov>=3.0.0
-pylint>=2.13.9
-pyyaml>=6.0
-yapf>=0.32.0
-flask>=2.1.2
-gunicorn>=20.1.0
-functions-framework>=3.0.0
-firebase-admin >=5.2.0
-setuptools>=62.6.0
+setuptools>=63.4.2
