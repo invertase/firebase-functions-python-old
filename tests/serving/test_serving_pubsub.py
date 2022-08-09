@@ -2,7 +2,6 @@
 Unit tests for Pub/Sub triggers.
 """
 
-import logging
 import yaml
 import pytest
 
@@ -14,7 +13,6 @@ from firebase_functions.serving import serve_admin, serve_triggers
 
 import cloudevents.http
 
-LOGGER = logging.getLogger(__name__)
 attributes = {
     "specversion": "1.0",
     "id": "5320408004945103",
