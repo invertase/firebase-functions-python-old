@@ -7,6 +7,8 @@ import base64
 import functools
 import datetime as dt
 
+import cloudevents.http as ce
+
 from dataclasses import dataclass
 from typing import Any, Callable, Generic, List, TypeVar, Union, Optional
 
@@ -25,6 +27,8 @@ T = TypeVar("T")
 
 @dataclass(frozen=True)
 class CloudEvent(Generic[T]):
+    id: str
+    datacontenttype: str
     specversion: str
     source: str
     type: str
@@ -77,49 +81,45 @@ class MessagePublishedData(Generic[T]):
 
 def pubsub_wrap_handler(
     func: Callable[[CloudEvent[MessagePublishedData[T]]], None],
-    raw: CloudEvent[Any],
+    raw: ce.CloudEvent,
 ) -> flask.Response:
-    if isinstance(raw, CloudEvent):
-        event_dict = {
-            **{
-                k: v for k, v in raw.__dict__.items() if k in CloudEvent.__annotations__
-            }
-        }
+    if isinstance(raw, ce.CloudEvent):
+        event_dict = {**raw}
     else:
         event_dict = raw
 
     data = event_dict["data"]
-    message = data["message"]
+    message_dict = data["message"]
 
     time = dt.datetime.strptime(
-        message["publish_time"],
+        message_dict["publish_time"],
         "%Y-%m-%dT%H:%M:%S.%f%z",
     )
 
     # Convert the UTC string into a datetime object
     event_dict["time"] = time
-    message["publish_time"] = time
+    message_dict["publish_time"] = time
 
     # Pop unnecessary keys from the message data
     # (we get these keys from the snake case alternatives that are provided)
-    message.pop("messageId", None)
-    message.pop("publishTime", None)
+    message_dict.pop("messageId", None)
+    message_dict.pop("publishTime", None)
 
     # `orderingKey` doesn't come with a snake case alternative,
     # there is no `ordering_key` in the raw request.
-    ordering_key = message.pop("orderingKey", None)
+    ordering_key = message_dict.pop("orderingKey", None)
 
-    event_dict["data"] = MessagePublishedData(
+    message: MessagePublishedData = MessagePublishedData(
         message=Message(
-            **message,
+            **message_dict,
             ordering_key=ordering_key,
         ),
         subscription=data["subscription"],
     )
 
-    event: CloudEvent[MessagePublishedData] = CloudEvent(**{
-        k: v for k, v in event_dict.items() if k in CloudEvent.__annotations__
-    })
+    event_dict["data"] = message
+
+    event: CloudEvent[MessagePublishedData] = CloudEvent(**event_dict)
 
     func(event)
     response = flask.jsonify(status=200)
