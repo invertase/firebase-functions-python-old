@@ -23,7 +23,7 @@ from firebase_functions.params import BoolParam, SecretParam, StringParam, IntPa
 T = TypeVar("T")
 
 
-@dataclass()
+@dataclass(frozen=True)
 class CloudEvent(Generic[T]):
     specversion: str
     source: str
@@ -79,47 +79,55 @@ def pubsub_wrap_handler(
     func: Callable[[CloudEvent[MessagePublishedData[T]]], None],
     raw: CloudEvent[Any],
 ) -> flask.Response:
-    if isinstance(raw, dict):
-        raw = CloudEvent(
-            **{k: v for k, v in raw.items() if k in CloudEvent.__annotations__})
+    if isinstance(raw, CloudEvent):
+        event_dict = {
+            **{
+                k: v for k, v in raw.__dict__.items() if k in CloudEvent.__annotations__
+            }
+        }
+    else:
+        event_dict = raw
 
-    data = raw.data
+    data = event_dict["data"]
+    message = data["message"]
 
     time = dt.datetime.strptime(
-        data["message"]["publish_time"],
+        message["publish_time"],
         "%Y-%m-%dT%H:%M:%S.%f%z",
     )
 
     # Convert the UTC string into a datetime object
-    raw.time = time
-    data["message"]["publish_time"] = time
+    event_dict["time"] = time
+    message["publish_time"] = time
 
     # Pop unnecessary keys from the message data
     # (we get these keys from the snake case alternatives that are provided)
-    data["message"].pop("messageId", None)
-    data["message"].pop("publishTime", None)
+    message.pop("messageId", None)
+    message.pop("publishTime", None)
 
-    # `orderingKey` doesn"t come with a snake case alternative,
-    # there is no ordering_key in the raw request.
-    ordering_key = data["message"].pop("orderingKey", None)
+    # `orderingKey` doesn't come with a snake case alternative,
+    # there is no `ordering_key` in the raw request.
+    ordering_key = message.pop("orderingKey", None)
 
-    message: MessagePublishedData = MessagePublishedData(
+    event_dict["data"] = MessagePublishedData(
         message=Message(
-            **data["message"],
+            **message,
             ordering_key=ordering_key,
         ),
         subscription=data["subscription"],
     )
 
-    raw.data = message
+    event: CloudEvent[MessagePublishedData] = CloudEvent(**{
+        k: v for k, v in event_dict.items() if k in CloudEvent.__annotations__
+    })
 
-    func(raw)
+    func(event)
     response = flask.jsonify(status=200)
     return response
 
 
 def on_message_published(
-    func: Callable[[MessagePublishedData], None] = None,
+    func: Callable[[MessagePublishedData[T]], None] = None,
     *,
     topic: str,
     region: Union[None, StringParam, str] = None,
@@ -132,7 +140,7 @@ def on_message_published(
     service_account: Union[None, StringParam, str, Sentinel] = None,
     secrets: Union[None, List[StringParam], SecretParam, Sentinel] = None,
     retry: Union[None, bool, BoolParam] = None,
-) -> Callable[[MessagePublishedData], None]:
+) -> Callable[[MessagePublishedData[T]], None]:
     """
         Decorator for functions that are triggered by Pub/Sub."""
 
