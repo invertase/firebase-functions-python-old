@@ -1,66 +1,46 @@
-"""
-BoolParam unit tests.
-"""
-import os
+"""BoolParam unit tests."""
+from os import environ
 
 import pytest
-import firebase_functions.params as params
+from firebase_functions import params
 
 
-def test_bool_param_value_true():
-    """
-    Testing if bool param correctly returns a truth value.
-    """
-    valid_truthy_values = ["true", "t", "1", "y", "yes"]
-    for value in valid_truthy_values:
-        os.environ["bool_value_test"] = value
-        param = params.BoolParam("bool_value_test")
-        assert param.value() == True
-
-
-def test_bool_param_value_false():
-    """
-    Testing if bool param correctly returns a false value.
-    """
-    valid_falsey_values = ["false", "f", "0", "n", "no"]
-    for value in valid_falsey_values:
-        os.environ["bool_value_test"] = value
-        param = params.BoolParam("bool_value_test")
-        assert param.value() == False
+def test_bool_param_value_true_or_false():
+    """Testing if bool params correctly returns a truth or false value."""
+    for value_true, value_false in zip(
+        ["true", "t", "1", "y", "yes"], ["false", "f", "0", "n", "no"]
+    ):
+        environ["bool_value_test"] = value_true
+        assert (
+            params.BoolParam("bool_value_test").value() is True
+        ), "Failure, prams returned False"
+        environ["bool_value_test"] = value_false
+        assert (
+            params.BoolParam("bool_value_test").value() is False
+        ), "Failure, prams returned True"
 
 
 def test_bool_param_value_error():
-    """
-    Testing if bool param throws a value error if invalid value.
-    """
+    """Testing if bool params throws a value error if invalid value."""
     with pytest.raises(ValueError):
-        os.environ["bool_value_test"] = "bad_value"
-        param = params.BoolParam("bool_value_test")
-        param.value()
+        environ["bool_value_test"] = "bad_value"
+        params.BoolParam("bool_value_test").value()
 
 
 def test_bool_param_empty_default():
-    """
-    Testing if bool param defaults to False if no value and no default.
-    """
-    param = params.BoolParam("bool_default_test")
-    print(param.value())
-    assert param.value() == False
+    """Testing if bool params defaults to False if no value and no default."""
+    assert (
+        params.BoolParam("bool_default_test").value() is False
+    ), "Failure, prams returned True"
 
 
 def test_bool_param_default():
-    """
-    Testing if bool param defaults to provided default value.
-    """
-    param = params.BoolParam(
-        "bool_default_test",
+    """Testing if bool params defaults to provided default value."""
+    assert (
         # TODO accepts any value for default, but should only accept True or False
-        default=False,
-    )
-    assert param.value() == False
-    param = params.BoolParam(
-        "bool_default_test",
+        params.BoolParam("bool_default_test", default=False).value() is False
+    ), "Failure, prams returned True"
+    assert (
         # TODO accepts any value for default, but should only accept True or False
-        default=True,
-    )
-    assert param.value() == True
+        params.BoolParam("bool_default_test", default=True).value() is True
+    ), "Failure, prams returned False"
