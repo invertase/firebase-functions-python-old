@@ -16,7 +16,6 @@ from firebase_functions.serving import (
     serve_triggers,
 )
 
-LOGGER = logging.getLogger(__name__)
 
 # Environment variable used for pubsub topic name.
 os.environ["GCLOUD_PROJECT"] = "test-project"
@@ -34,7 +33,6 @@ os.environ["GCLOUD_PROJECT"] = "test-project"
 )
 def http_request_function(req, res: Response):
     """Gather HTTP request response"""
-    LOGGER.debug(req.data.decode("utf-8"))
     res.set_data("Hello World!")
 
 
