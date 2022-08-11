@@ -2,7 +2,7 @@
 
 ## Requirements
 
-- Python 3.9 or higher.
+- Python 3.10 or higher.
 - Pip (usually installed alongside Python).
 
 ## Usage
@@ -12,7 +12,7 @@ It makes it a lot easier to keep Python dependencies and modules isolated from t
 of your environment.
 
 ```
-pip install --user virtualenv --python=3.9
+pip install --user virtualenv --python=3.10
 
 # After this you might have to add the virtualenv binary
 # to your $PATH.
@@ -20,9 +20,9 @@ pip install --user virtualenv --python=3.9
 
 1.  Start by creating a virtual environment in your project directory.
     > **Note**
-    > The minumum supported Python version is **3.9**.
+    > The minumum supported Python version is **3.10**.
         ```
-        python3.9 -m venv .env
+        python3.10 -m venv .env
         ```
 2.  Activate the virtual environment you just created.
     ```
