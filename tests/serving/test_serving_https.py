@@ -2,7 +2,6 @@
 
 import dataclasses
 import json
-import logging
 import os
 import pytest
 import yaml
@@ -39,7 +38,6 @@ def http_request_function(req, res: Response):
 @on_call(memory=options.Memory.MB_256)
 def http_callable_function(req):
     """Performs HTTP call"""
-    LOGGER.debug(req.data)
     return "Hello World, again!"
 
 

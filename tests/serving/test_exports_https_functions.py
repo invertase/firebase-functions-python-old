@@ -84,7 +84,8 @@ def test_https_on_call_function_endpoint():
     ), "Failure, endpoint vpc egress_settings different from options VpcEgressSettings ALL_TRAFFIC"
     assert (
         endpoint.ingressSettings == options.IngressSettings.ALLOW_INTERNAL_AND_GCLB
-    ), "Failure, endpoint ingressSettings different from options IngressSettings ALLOW_INTERNAL_AND_GCLB"
+    ), "Failure, endpoint ingressSettings different from options " \
+       "IngressSettings ALLOW_INTERNAL_AND_GCLB"
     assert (
         endpoint.serviceAccount == "some-service-account"
     ), 'Failure, endpoint serviceAccount different from "some-service-account"'

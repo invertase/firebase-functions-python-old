@@ -1,7 +1,7 @@
 """
 Options unit tests.
 """
-import firebase_functions.options as options
+from firebase_functions import options
 
 
 def test_set_global_options():
