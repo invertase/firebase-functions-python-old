@@ -1,5 +1,4 @@
-"""
-Module for Cloud Functions that listen to HTTPS endpoints.
+"""Module for Cloud Functions that listen to HTTPS endpoints.
 These can be raw web requests and Callable RPCs.
 """
 
@@ -7,12 +6,10 @@ import dataclasses
 import functools
 import json
 import re
-import flask
 
 from enum import Enum
 from dataclasses import dataclass
 from collections.abc import Callable
-from firebase_admin import auth, _apps
 from typing import (
     Any,
     Generic,
@@ -21,6 +18,10 @@ from typing import (
     Union,
     Optional,
 )
+from firebase_admin import auth, _apps
+
+from flask import Request, Response, jsonify
+
 
 from functions_framework import logging
 
@@ -43,8 +44,6 @@ from firebase_functions.options import (
     Sentinel,
 )
 
-Request = flask.Request
-Response = flask.Response
 
 T = TypeVar("T")
 
@@ -249,6 +248,8 @@ class TokenStatus(Enum):
 
 
 class CallableTokenStatus:
+    """Check CallableTokenStatus"""
+
     app: Optional[TokenStatus] = None
     auth: Optional[TokenStatus] = None
 
@@ -257,6 +258,7 @@ class CallableTokenStatus:
         self.auth = TokenStatus.INVALID
 
     def to_dict(self) -> dict:
+        """Set dictionary"""
         return {
             "app": self.app.value if self.app is not None else None,
             "auth": self.auth.value if self.auth is not None else None,
@@ -281,8 +283,8 @@ def check_auth_token(req: Request, ctx: CallableRequest) -> TokenStatus:
             )
 
             return TokenStatus.VALID
-        except auth.InvalidIdTokenError as e:
-            logging.error(f"Error validating token: {e}")
+        except auth.InvalidIdTokenError:
+            logging.error(f"Error validating token: {auth.InvalidIdTokenError}")
             return TokenStatus.INVALID
     return TokenStatus.INVALID
 
@@ -304,6 +306,7 @@ def check_tokens(
     req: Request,
     ctx: CallableRequest,
 ) -> CallableTokenStatus:
+    """Check tokens"""
     verifications = CallableTokenStatus()
 
     verifications.auth = check_auth_token(req, ctx)
@@ -335,59 +338,68 @@ def check_tokens(
     return verifications
 
 
-def valid_request(request: Request) -> bool:
-    # The body must not be empty.
-    if request.json is None:
-        logging.warning("Request is missing body.")
-        return False
+class ValidateRequest:
+    """Validate requests"""
 
-    # Make sure it's a POST.
-    if request.method != "POST":
-        logging.warning("Request has invalid method.", request.method)
-        return False
+    def __int__(self, request: Request = None):
+        self.request = request
 
-    content_type: Optional[str] = request.headers.get("Content-Type")
+    def valid_request(self) -> bool:
+        """Validate requests parameters"""
+        # The body must not be empty.
+        if self.request.json is None:
+            logging.warning("Request is missing body.")
+            return False
 
-    if content_type is None:
-        logging.warning("Request is missing Content-Type.", content_type)
-        return False
+        # Make sure it's a POST.
+        if self.request.method != "POST":
+            logging.warning("Request has invalid method.", self.request.method)
+            return False
+        return True
 
-    # If it has a charset, just ignore it for now.
-    semi_colon = 0
+    def valid_content(self) -> bool:
+        """Validate requests content"""
 
-    try:
-        semi_colon = content_type.index(";")
-        if semi_colon >= 0:
-            content_type = content_type[0:semi_colon].strip()
-    except ValueError:
-        pass
+        content_type: Optional[str] = self.request.headers.get("Content-Type")
 
-    # Check that the Content-Type is JSON.
-    if content_type != "application/json":
-        logging.warning("Request has incorrect Content-Type.", content_type)
-        return False
+        if content_type is None:
+            logging.warning("Request is missing Content-Type.", content_type)
+            return False
 
-    # The body must have data.
-    if request.json["data"] is None:
-        # TODO should we check if data exists or not?
-        logging.warning("Request body is missing data.", request.json)
-        return False
+        # If it has a charset, just ignore it for now.
+        semi_colon=0
+        try:
+            semi_colon = content_type.index(";")
+            if semi_colon >= 0:
+                content_type = content_type[0:semi_colon].strip()
+        except ValueError:
+            pass
+        # Check that the Content-Type is JSON.
+        if content_type != "application/json":
+            logging.warning("Request has incorrect Content-Type.", content_type)
+            return False
 
-    extra_keys = {}
+        # The body must have data.
+        if self.request.json["data"] is None:
+            # TODO should we check if data exists or not?
+            logging.warning("Request body is missing data.", self.request.json)
+            return False
 
-    # Verify that the body does not have any extra fields.
-    for key in request.json.keys():
-        if key != "data":
-            extra_keys.update({key: request.json[key]})
+        # Verify that the body does not have any extra fields.
+        extra_keys = {
+            key[key]: self.request.json[key]
+            for key in self.request.json.keys()
+            if key != "data"
+        }
 
-    if len(extra_keys) != 0:
-        logging.warning(
-            "Request body has extra fields: ",
-            "".join(f"{key}: {value}," for (key, value) in extra_keys.items()),
-        )
-        return False
+        if len(extra_keys) != 0:
+            logging.warning(
+                "Request body has extra fields: ",
+                "".join(f"{key}: {value}," for (key, value) in extra_keys.items()),
+            )
+            return False
 
-    return True
+        return True
 
 
 class HttpResponseBody:
@@ -404,7 +416,8 @@ def wrap_on_call_handler(
     options: HttpsOptions,
 ) -> Response:
     try:
-        if not valid_request(request):
+        handler_request = ValidateRequest(request)
+        if not handler_request.valid_request() and handler_request.valid_content():
             logging.error("Invalid request, unable to process.")
             raise HttpsError(FunctionsErrorCode.INVALID_ARGUMENT, "Bad Request")
 
@@ -443,7 +456,7 @@ def wrap_on_call_handler(
 
         result = func(arg)
 
-        response = flask.jsonify(data=result, status=200)
+        response = jsonify(data=result, status=200)
     # Disable broad exceptions lint since we want to handle all exceptions here
     # and wrap as an HttpsError.
     # pylint: disable=broad-except
@@ -454,7 +467,7 @@ def wrap_on_call_handler(
 
         status = err.http_error_code.status
 
-        response = flask.jsonify(error=err.to_dict(), status=status)
+        response = jsonify(error=err.to_dict(), status=status)
 
     return response
 

@@ -1,6 +1,4 @@
-"""
-Module for params that can make Cloud Functions codebases generic.
-"""
+"""Module for params that can make Cloud Functions code bases generic."""
 
 import os
 import abc
@@ -13,7 +11,7 @@ T = TypeVar("T", int, float, str, bool, Sequence[str])
 
 
 class Input(Generic[T]):
-    pass
+    """Input generic type T"""
 
 
 @dataclass(frozen=True)
@@ -30,6 +28,7 @@ class SelectOption(Generic[T]):
 
 @dataclass(frozen=True)
 class TextInput(Input[T]):
+    """Text for input T"""
     example: Optional[T] = None
     validation_regex: Optional[str] = None
     validation_error_message: Optional[str] = None
@@ -45,6 +44,7 @@ class TextInput(Input[T]):
 
 @dataclass(frozen=True)
 class SelectInput(Input[T]):
+    """Selection of input T"""
     options: Union[Sequence[T], Sequence[SelectOption[T]]]
     """Input for this parameter should select from a predefined set of options.
 
@@ -68,7 +68,7 @@ class MultiselectInput(Input[Sequence[str]]):
 
 
 class CheckboxInput(Input[bool]):
-    pass
+    """Checkbox for input T"""
 
 
 class ResourceType(Enum):
@@ -99,7 +99,7 @@ class Expression(abc.ABC, Generic[E]):
     @abc.abstractmethod
     def expression(self) -> str:
         """Returns the CEL for this expression"""
-        pass
+
 
     def __str__(self) -> str:
         """Returns the full expression in a {{ }} escape sequence"""
@@ -107,7 +107,7 @@ class Expression(abc.ABC, Generic[E]):
 
     @abc.abstractmethod
     def value(self) -> E:
-        pass
+        """Parse value"""
 
 
 @dataclass(frozen=True)
@@ -116,15 +116,16 @@ class _IfThenExpression(Expression[E]):
     An expression that returns the value of the first expression if the
     condition is true, otherwise the value of the second expression.
     """
+
     condition: Expression[bool]
     then_val: E
     else_val: E
 
     def value(self) -> E:
+        """Parse value"""
         if super().value():
             return self.then_val
-        else:
-            return self.else_val
+        return self.else_val
 
     def expression(self) -> str:
         return f"{self.condition.expression} ? {self.then_val} : {self.else_val}"
@@ -138,12 +139,11 @@ class BoolExpression(Expression[bool]):
         return "bool"
 
     def value(self) -> bool:
-        pass
+        """Parse value"""
 
     def then(self, then_val: E, else_val: E) -> Expression[E]:
-        return _IfThenExpression(condition=self,
-                                 then_val=then_val,
-                                 else_val=else_val)
+        """Return if then expression"""
+        return _IfThenExpression(condition=self, then_val=then_val, else_val=else_val)
 
 
 @dataclass(frozen=True)
@@ -168,12 +168,12 @@ class ComparableExpression(Expression[E]):
 
     def expression(self) -> str:
         """Returns the CEL for this expression"""
-        pass
 
     def value(self) -> E:
-        pass
+        """Parse value"""
 
     def equals(self, val: E) -> BoolExpression:
+        """Return equality expression"""
         return _EqualityExpression(left=self, right=val)
 
 
@@ -213,12 +213,12 @@ class StringParam(_Param[str], ComparableExpression[str]):
     def value(self) -> str:
         if os.environ.get(self.name) is not None:
             return os.environ[self.name]
-        elif isinstance(self.default, Expression):
+        if isinstance(self.default, Expression):
             return self.default.value()
-        elif self.default is not None:
+        if self.default is not None:
             return self.default
-        else:
-            return str()
+
+        return str()
 
 
 @dataclass(frozen=True)
@@ -228,12 +228,11 @@ class IntParam(_Param[int], ComparableExpression[int]):
     def value(self) -> int:
         if os.environ.get(self.name) is not None:
             return int(os.environ[self.name])
-        elif isinstance(self.default, Expression):
+        if isinstance(self.default, Expression):
             return self.default.value()
-        elif self.default is not None:
+        if self.default is not None:
             return self.default
-        else:
-            return int()
+        return int()
 
 
 @dataclass(frozen=True)
@@ -243,12 +242,11 @@ class FloatParam(_Param[float], ComparableExpression[float]):
     def value(self) -> float:
         if os.environ.get(self.name) is not None:
             return float(os.environ[self.name])
-        elif isinstance(self.default, Expression):
+        if isinstance(self.default, Expression):
             return self.default.value()
-        elif self.default is not None:
+        if self.default is not None:
             return self.default
-        else:
-            return float()
+        return float()
 
 
 @dataclass(frozen=True)
@@ -258,12 +256,11 @@ class ListParam(_Param[Iterable[str]]):
     def value(self) -> Iterable[str]:
         if os.environ.get(self.name) is not None:
             return os.environ[self.name].split(",")
-        elif isinstance(self.default, Expression):
+        if isinstance(self.default, Expression):
             return self.default.value()
-        elif self.default is not None:
+        if self.default is not None:
             return self.default
-        else:
-            return []
+        return []
 
 
 @dataclass(frozen=True)
@@ -275,16 +272,14 @@ class BoolParam(_Param[bool], BoolExpression):
         if env_value is not None:
             if env_value.lower() in ["true", "t", "1", "y", "yes"]:
                 return True
-            elif env_value.lower() in ["false", "f", "0", "n", "no"]:
+            if env_value.lower() in ["false", "f", "0", "n", "no"]:
                 return False
-            else:
-                raise ValueError(f"Invalid value for {self.name}: {env_value}")
-        elif isinstance(self.default, Expression):
+            raise ValueError(f"Invalid value for {self.name}: {env_value}")
+        if isinstance(self.default, Expression):
             return self.default.value()
-        elif self.default is not None:
+        if self.default is not None:
             return self.default
-        else:
-            return False
+        return False
 
 
 @dataclass(frozen=True)
@@ -317,12 +312,11 @@ class SecretParam:
         return str(os.environ.get(self.name) or self.default or "")
 
 
-PROJECT_ID = StringParam("GCLOUD_PROJECT",
-                         description="The active Firebase project")
+PROJECT_ID = StringParam("GCLOUD_PROJECT", description="The active Firebase project")
 
 STORAGE_BUCKET = StringParam(
-    "STORAGE_BUCKET",
-    description="The default Cloud Storage for Firebase bucket")
+    "STORAGE_BUCKET", description="The default Cloud Storage for Firebase bucket"
+)
 
 DATABASE_URL = StringParam(
     "DATABASE_URL",
