@@ -29,8 +29,7 @@ def on_message_published_function():
     min_instances=6,
     max_instances=12,
     vpc=options.VpcOptions(
-        connector="id",
-        egress_settings=options.VpcEgressSettings.PRIVATE_RANGES_ONLY,
+        connector="id", egress_settings=options.VpcEgressSettings.PRIVATE_RANGES_ONLY
     ),
     ingress=options.IngressSettings.ALLOW_INTERNAL_ONLY,
     service_account="some-service-account",
@@ -53,22 +52,27 @@ def test_on_message_published_function_endpoint_has_all_options():
     through to ManifestEndpoint configuration.
     """
     endpoint: ManifestEndpoint = (
-        on_message_published_function_all_options.__firebase_endpoint__)
+        on_message_published_function_all_options.__firebase_endpoint__
+    )
     assert isinstance(
         endpoint, ManifestEndpoint
     ), "Failure, endpoint is not an instance of ManifestEndpoint"
-    assert (endpoint.eventTrigger["eventFilters"]["topic"] ==
-            "projects/test-project/topics/my-awesome-topic"), (
-                'Failure, endpoint.eventTrigger["eventFilters"]["topic"] '
-                '!= "projects/test-project/topics/my-awesome-topic')
     assert (
-        endpoint.entryPoint ==
-        on_message_published_function_all_options.__name__
+        endpoint.eventTrigger["eventFilters"]["topic"]
+        == "projects/test-project/topics/my-awesome-topic"
+    ), (
+        'Failure, endpoint.eventTrigger["eventFilters"]["topic"] '
+        '!= "projects/test-project/topics/my-awesome-topic'
+    )
+    assert (
+        endpoint.entryPoint == on_message_published_function_all_options.__name__
     ), "Failure, endpoint.entryPoint != on_message_published_function_all_options.__name__ "
-    assert (endpoint.region == "europe-west2"
-           ), 'Failure, endpoint.region != "europe-west2"'
-    assert (endpoint.availableMemoryMb == 512
-           ), "Failure, endpoint.availableMemoryMb != 512"
+    assert (
+        endpoint.region == "europe-west2"
+    ), 'Failure, endpoint.region != "europe-west2"'
+    assert (
+        endpoint.availableMemoryMb == 512
+    ), "Failure, endpoint.availableMemoryMb != 512"
     assert endpoint.timeoutSeconds == 123, "Failure, endpoint.timeoutSeconds != 123"
     assert endpoint.minInstances == 6, "Failure, endpoint.minInstances != 6"
     assert endpoint.maxInstances == 12, "Failure, endpoint.maxInstances != 12"
@@ -78,8 +82,7 @@ def test_on_message_published_function_endpoint_has_all_options():
     assert endpoint.vpc.connector == "id", 'Failure, endpoint.vpc.connector != "id"'
     # TODO should this be camel case like other options?
     assert (
-        endpoint.vpc.egress_settings ==
-        options.VpcEgressSettings.PRIVATE_RANGES_ONLY
+        endpoint.vpc.egress_settings == options.VpcEgressSettings.PRIVATE_RANGES_ONLY
     ), "Failure, endpoint.vpc.egress_settings != options.VpcEgressSettings.PRIVATE_RANGES_ONLY"
     assert (
         endpoint.ingressSettings == options.IngressSettings.ALLOW_INTERNAL_ONLY
@@ -92,8 +95,9 @@ def test_on_message_published_function_endpoint_has_all_options():
         "secret-2",
     ], 'Failure, endpoint.secretEnvironmentVariables != ["secret-1", "secret-2"]'
     assert endpoint.eventTrigger is not None, "Failure, endpoint.eventTrigger is None"
-    assert (endpoint.callableTrigger is
-            None), "Failure, endpoint.callableTrigger is not None"
+    assert (
+        endpoint.callableTrigger is None
+    ), "Failure, endpoint.callableTrigger is not None"
     assert endpoint.httpsTrigger is None, "Failure, endpoint.httpsTrigger is not None"
 
 
@@ -103,23 +107,29 @@ def test_on_message_published_function_endpoint():
     assert isinstance(
         endpoint, ManifestEndpoint
     ), "Failure, endpoint is not an instance of ManifestEndpoint"
-    assert (endpoint.eventTrigger["eventFilters"]["topic"] ==
-            "projects/test-project/topics/my-awesome-topic"), (
-                'Failure, endpoint.eventTrigger["eventFilters"]["topic"] '
-                '!= "projects/test-project/topics/my-awesome-topic')
+    assert (
+        endpoint.eventTrigger["eventFilters"]["topic"]
+        == "projects/test-project/topics/my-awesome-topic"
+    ), (
+        'Failure, endpoint.eventTrigger["eventFilters"]["topic"] '
+        '!= "projects/test-project/topics/my-awesome-topic'
+    )
     assert (
         endpoint.entryPoint == on_message_published_function.__name__
     ), "Failure, endpoint.entryPoint != on_message_published_function.__name__ "
-    assert (endpoint.region == "europe-west2"
-           ), 'Failure, endpoint.region != "europe-west2"'
-    assert (endpoint.availableMemoryMb == 512
-           ), "Failure, endpoint.availableMemoryMb != 512"
+    assert (
+        endpoint.region == "europe-west2"
+    ), 'Failure, endpoint.region != "europe-west2"'
+    assert (
+        endpoint.availableMemoryMb == 512
+    ), "Failure, endpoint.availableMemoryMb != 512"
     assert isinstance(
         endpoint.ingressSettings, options.Sentinel
     ), "Failure, endpoint.ingressSettings is not an instance options.Sentinel"
     assert endpoint.eventTrigger is not None, "Failure, endpoint.eventTrigger is None"
-    assert (endpoint.callableTrigger is
-            None), "Failure, endpoint.callableTrigger is not None"
+    assert (
+        endpoint.callableTrigger is None
+    ), "Failure, endpoint.callableTrigger is not None"
     assert endpoint.httpsTrigger is None, "Failure, endpoint.httpsTrigger is not None"
 
 
@@ -128,20 +138,22 @@ def test_on_message_published_function_trigger_metadata():
     """Test on_message_published function trigger metadata is correctly attached."""
     trigger = on_message_published_function.__firebase_trigger__
     assert isinstance(trigger, dict), "Failure, trigger is not a dict"
-    assert (trigger["memory"] == options.Memory.MB_512
-           ), "Failure, trigger memory different from 512Mb"
-    assert (trigger["region"] == "europe-west2"
-           ), 'Failure, trigger region different from "europe-west2"'
+    assert (
+        trigger["memory"] == options.Memory.MB_512
+    ), "Failure, trigger memory different from 512Mb"
+    assert (
+        trigger["region"] == "europe-west2"
+    ), 'Failure, trigger region different from "europe-west2"'
 
 
 def test_on_message_published_function_trigger_exports():
     """Test on_message_published functions are detected in codegen exports."""
     exports = serving.get_exports(__file__)
-    assert ("on_message_published_function" in exports
-           ), 'Failure, "on_message_published_function" is not in exports'
     assert (
-        exports["on_message_published_function"]["memory"] ==
-        options.Memory.MB_512
+        "on_message_published_function" in exports
+    ), 'Failure, "on_message_published_function" is not in exports'
+    assert (
+        exports["on_message_published_function"]["memory"] == options.Memory.MB_512
     ), 'Failure, exports "on_message_published_function" memory different from 512Mb'
     assert (
         exports["on_message_published_function"]["region"] == "europe-west2"

@@ -24,9 +24,12 @@ triggers: dict = {"unknown_function": unknown_function}
 def test_spec_unknown():
     """Test unknown specification"""
     with serve_admin(triggers=triggers).test_client() as client:
-        assert ("uknownfunction" not in yaml.safe_load(
-            client.get("/__/functions.yaml").get_data())["endpoints"]
-               ), "Failure, function is known"
+        assert (
+            "uknownfunction"
+            not in yaml.safe_load(client.get("/__/functions.yaml").get_data())[
+                "endpoints"
+            ]
+        ), "Failure, function is known"
 
 
 def test_unknown_trigger_type():
