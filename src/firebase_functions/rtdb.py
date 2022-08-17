@@ -13,11 +13,13 @@
 # limitations under the License.
 
 """Module for Cloud Functions that are triggered by the Firebase Realtime Database."""
+# pylint: disable=unused-argument
 
 from dataclasses import dataclass
 from typing import Callable, Dict, Iterable, Sequence, TypeVar, Union
 
 from firebase_functions import options, params
+from firebase_functions.utils import CloudEvent
 
 
 T = TypeVar("T")
@@ -25,12 +27,16 @@ T = TypeVar("T")
 
 @dataclass(frozen=True)
 class Change:
+    """Perform change"""
+
     before: object
     after: object
 
 
 @dataclass(frozen=True)
-class Event(event.CloudEvent[T]):
+class Event(CloudEvent[T]):
+    """Make event"""
+
     firebase_database_host: str
     instance: str
     reference: str
@@ -54,19 +60,19 @@ def on_value_written(
         None, Sequence[str], params.Expression[Iterable[str]], options.Sentinel
     ] = None,
 ) -> Callable[[Event[Change]], None]:
-    """Decorator for a function that can handle a write to the Realtime Database.
+    """Decorator for a function that can handle write to the Realtime Database.
 
     Parameters:
         reference: The database path (ref) to listen on. Paths may include components
            with a wildcard (*) character to match a single component or (**) to
            match zero or more components. Wildcards can be captured by putting a
            capture statement in curly-brackets. For example, one can listen to and
-           capture a "uid" variable with ref="users/{uid}" or ref="users/{uid=*}".
+           capture an "uid" variable with ref="users/{uid}" or ref="users/{uid=*}".
            To capture zero or more components, "=" syntax must be used. For, example,
            ref="notes/{path=**}".
         instance: The Realtime Database instance to listen to. The instance must
           be in the same region as the Cloud Function. Users may use "*" to match
-          against a wildcard. Defaults to listening to all databases in the reigon
+          against a wildcard. Defaults to listening to all databases in the region
           of the Cloud Function.
         region: Region to deploy functions. Defaults to us-central1.
         memory: MB to allocate to function. Defaults to Memory.MB_256
@@ -115,12 +121,12 @@ def on_value_updated(
            with a wildcard (*) character to match a single component or (**) to
            match zero or more components. Wildcards can be captured by putting a
            capture statement in curly-brackets. For example, one can listen to and
-           capture a "uid" variable with ref="users/{uid}" or ref="users/{uid=*}".
+           capture an "uid" variable with ref="users/{uid}" or ref="users/{uid=*}".
            To capture zero or more components, "=" syntax must be used. For, example,
            ref="notes/{path=**}".
         instance: The Realtime Database instance to listen to. The instance must
           be in the same region as the Cloud Function. Users may use "*" to match
-          against a wildcard. Defaults to listening to all databases in the reigon
+          against a wildcard. Defaults to listening to all databases in the region
           of the Cloud Function.
         region: Region to deploy functions. Defaults to us-central1.
         memory: MB to allocate to function. Defaults to Memory.MB_256
@@ -169,12 +175,12 @@ def on_value_created(
            with a wildcard (*) character to match a single component or (**) to
            match zero or more components. Wildcards can be captured by putting a
            capture statement in curly-brackets. For example, one can listen to and
-           capture a "uid" variable with ref="users/{uid}" or ref="users/{uid=*}".
+           capture an "uid" variable with ref="users/{uid}" or ref="users/{uid=*}".
            To capture zero or more components, "=" syntax must be used. For, example,
            ref="notes/{path=**}".
         instance: The Realtime Database instance to listen to. The instance must
           be in the same region as the Cloud Function. Users may use "*" to match
-          against a wildcard. Defaults to listening to all databases in the reigon
+          against a wildcard. Defaults to listening to all databases in the region
           of the Cloud Function.
         region: Region to deploy functions. Defaults to us-central1.
         memory: MB to allocate to function. Defaults to Memory.MB_256
@@ -223,12 +229,12 @@ def on_value_deleted(
            with a wildcard (*) character to match a single component or (**) to
            match zero or more components. Wildcards can be captured by putting a
            capture statement in curly-brackets. For example, one can listen to and
-           capture a "uid" variable with ref="users/{uid}" or ref="users/{uid=*}".
+           capture an "uid" variable with ref="users/{uid}" or ref="users/{uid=*}".
            To capture zero or more components, "=" syntax must be used. For, example,
            ref="notes/{path=**}".
         instance: The Realtime Database instance to listen to. The instance must
           be in the same region as the Cloud Function. Users may use "*" to match
-          against a wildcard. Defaults to listening to all databases in the reigon
+          against a wildcard. Defaults to listening to all databases in the region
           of the Cloud Function.
         region: Region to deploy functions. Defaults to us-central1.
         memory: MB to allocate to function. Defaults to Memory.MB_256
