@@ -58,7 +58,7 @@ class Event(CloudEvent[T]):
     """Make event"""
 
     firebase_database_host: str
-    instance: str
+    instance: params.StringParam
     reference: str
     location: str
     params: Dict[str, str]
@@ -70,7 +70,10 @@ class DbData(Generic[T]):
     Wrapper around db data.
     """
 
-    data: Optional[str] = None
+    publish_time: dt.datetime
+    data: str = None
+    ordering_key: Optional[str] = None
+    attributes: Optional[dict[str, str]] = None
 
     @property
     def json(self) -> Optional[T]:
@@ -80,9 +83,7 @@ class DbData(Generic[T]):
                 return json.loads(base64.b64decode(self.data).decode("utf-8"))
             return None
         except Exception:
-            raise Exception(
-                f"Unable to parse data as JSON: {Exception}"
-            ) from Exception
+            raise Exception(f"Unable to parse data as JSON: {Exception}") from Exception
 
     def as_dict(self) -> dict[str, Any]:
         """Make dict"""
@@ -96,14 +97,16 @@ class DbData(Generic[T]):
 @dataclass(frozen=True)
 class PublishedDbData(Generic[T]):
     """Publish Db Data"""
-    message: DbData[T]
+
+    data: DbData[T]
     subscription: str
 
 
 def db_wrap_handler(
-        func: Callable[[CloudEvent[PublishedDbData[T]]], None],
-        raw: Union[ce.CloudEvent, dict],
+    func: Callable[[Event[PublishedDbData[T]]], None],
+    raw: Union[ce.CloudEvent, dict],
 ) -> flask.Response:
+
     """Database warp handler"""
     # If the call is coming from tests, the raw comes through as a dict,
     # therefore we need to convert it to a CloudEvent.
@@ -111,19 +114,44 @@ def db_wrap_handler(
         raw = ce.from_json(json.dumps(raw))
 
     # pylint: disable=protected-access
-    event_dict = {"data": raw.data}
+    event_dict = {"data": raw.data, **raw._attributes}
+    print(event_dict)
 
-    #data = event_dict["data"]
+    data = event_dict["data"]
+    message_dict = data["data"]
 
     time = dt.datetime.strptime(
         event_dict["time"],
         "%Y-%m-%dT%H:%M:%S.%f%z",
     )
 
+    publish_time = dt.datetime.strptime(
+        message_dict["publish_time"],
+        "%Y-%m-%dT%H:%M:%S.%f%z",
+    )
+
     # Convert the UTC string into a datetime object
     event_dict["time"] = time
+    message_dict["publish_time"] = publish_time
 
-    event: CloudEvent[PublishedDbData] = CloudEvent(**event_dict)
+    # Pop unnecessary keys from the message data
+    # (we get these keys from the snake case alternatives that are provided)
+    message_dict.pop("messageId", None)
+    message_dict.pop("publishTime", None)
+
+    ordering_key = message_dict.pop("orderingKey", None)
+
+    data2: PublishedDbData = PublishedDbData(
+        data=DbData(
+            **message_dict,
+            ordering_key=ordering_key,
+        ),
+        subscription=message_dict["subscription"],
+    )
+
+    event_dict["data"] = data2
+
+    event: Event[PublishedDbData] = Event(**event_dict)
 
     func(event)
     response = flask.jsonify(status=200)
@@ -131,22 +159,29 @@ def db_wrap_handler(
 
 
 def on_value_written(
-        func: Callable[[CloudEvent[PublishedDbData[T]]], None] = None,
-        *,
-        reference: Union[str, params.Expression[str]],
-        instance: Union[None, str, params.Expression[str], options.Sentinel] = None,
-        region: Union[None, str, params.Expression[str], options.Sentinel] = None,
-        memory: Union[None, int, params.Expression[int], options.Sentinel] = None,
-        timeout_sec: Union[None, int, params.Expression[int], options.Sentinel] = None,
-        min_instances: Union[None, int, params.Expression[int], options.Sentinel] = None,
-        max_instances: Union[None, int, params.Expression[int], options.Sentinel] = None,
-        vpc: Union[None, options.VpcOptions, options.Sentinel] = None,
-        ingress: Union[None, options.IngressSettings, options.Sentinel] = None,
-        service_account: Union[None, str, params.Expression[str], options.Sentinel] = None,
-        secrets: Union[
-            None, Sequence[str], params.Expression[Iterable[str]], options.Sentinel
-        ] = None,
-) -> Callable[[Event[Change]], None]:
+    func: Callable[[Event[PublishedDbData[T]]], None] = None,
+    *,
+    reference: Union[str, params.Expression[str]],
+    instance: Union[None, str, params.Expression[str], options.Sentinel] = None,
+    region: Union[None, str, params.Expression[str], options.Sentinel] = None,
+    memory: Union[None, int, params.Expression[int], options.Sentinel] = None,
+    timeout_sec: Union[None, int, params.Expression[int], options.Sentinel] = None,
+    min_instances: Union[None, int, params.Expression[int], options.Sentinel] = None,
+    max_instances: Union[None, int, params.Expression[int], options.Sentinel] = None,
+    concurrency: Union[None, int, options.Sentinel] = None,
+    cpu: Union[None, int, str, options.Sentinel] = "gcf_gen1",
+    vpc_connector_egress_settings: Union[
+        None, int, options.VpcEgressSettings, options.Sentinel
+    ] = None,
+    vpc: Union[None, options.VpcOptions, options.Sentinel] = None,
+    ingress: Union[None, options.IngressSettings, options.Sentinel] = None,
+    service_account: Union[None, str, params.Expression[str], options.Sentinel] = None,
+    secrets: Union[
+        None, Sequence[str], params.Expression[Iterable[str]], options.Sentinel
+    ] = None,
+    retry: Union[None, bool, params.BoolParam] = None,
+    labels: Union[str, params.Expression[str]] = None,
+) -> Callable[[Event[object]], None]:
     """Decorator for a function that can handle write to the Realtime Database.
 
     Parameters:
@@ -192,6 +227,11 @@ def on_value_written(
         ingress=ingress,
         service_account=service_account,
         secrets=secrets,
+        concurrency=concurrency,
+        cpu=cpu,
+        vpc_connector_egress_settings=vpc_connector_egress_settings,
+        retry=retry,
+        labels=labels,
     )
 
     trigger = {} if reference_options is None else reference_options.metadata()
@@ -238,21 +278,29 @@ def on_value_written(
 
 
 def on_value_updated(
-        *,
-        reference: Union[str, params.Expression[str]],
-        instance: Union[None, str, params.Expression[str], options.Sentinel] = None,
-        region: Union[None, str, params.Expression[str], options.Sentinel] = None,
-        memory: Union[None, int, params.Expression[int], options.Sentinel] = None,
-        timeout_sec: Union[None, int, params.Expression[int], options.Sentinel] = None,
-        min_instances: Union[None, int, params.Expression[int], options.Sentinel] = None,
-        max_instances: Union[None, int, params.Expression[int], options.Sentinel] = None,
-        vpc: Union[None, options.VpcOptions, options.Sentinel] = None,
-        ingress: Union[None, options.IngressSettings, options.Sentinel] = None,
-        service_account: Union[None, str, params.Expression[str], options.Sentinel] = None,
-        secrets: Union[
-            None, Sequence[str], params.Expression[Iterable[str]], options.Sentinel
-        ] = None,
-) -> Callable[[Event[Change]], None]:
+    func: Callable[[Event[PublishedDbData[T]]], None] = None,
+    *,
+    reference: Union[str, params.Expression[str]],
+    instance: Union[None, str, params.Expression[str], options.Sentinel] = None,
+    region: Union[None, str, params.Expression[str], options.Sentinel] = None,
+    memory: Union[None, int, params.Expression[int], options.Sentinel] = None,
+    timeout_sec: Union[None, int, params.Expression[int], options.Sentinel] = None,
+    min_instances: Union[None, int, params.Expression[int], options.Sentinel] = None,
+    max_instances: Union[None, int, params.Expression[int], options.Sentinel] = None,
+    concurrency: Union[None, int, options.Sentinel] = None,
+    cpu: Union[None, int, str, options.Sentinel] = "gcf_gen1",
+    vpc_connector_egress_settings: Union[
+        None, int, options.VpcEgressSettings, options.Sentinel
+    ] = None,
+    vpc: Union[None, options.VpcOptions, options.Sentinel] = None,
+    ingress: Union[None, options.IngressSettings, options.Sentinel] = None,
+    service_account: Union[None, str, params.Expression[str], options.Sentinel] = None,
+    secrets: Union[
+        None, Sequence[str], params.Expression[Iterable[str]], options.Sentinel
+    ] = None,
+    retry: Union[None, bool, params.BoolParam] = None,
+    labels: Union[str, params.Expression[str]] = None,
+) -> Callable[[Event[object]], None]:
     """Decorator for a function that can handle an existing value changing in the Realtime Database.
 
     Parameters:
@@ -292,20 +340,28 @@ def on_value_updated(
 
 
 def on_value_created(
-        *,
-        reference: Union[str, params.Expression[str]],
-        instance: Union[None, str, params.Expression[str], options.Sentinel] = None,
-        region: Union[None, str, params.Expression[str], options.Sentinel] = None,
-        memory: Union[None, int, params.Expression[int], options.Sentinel] = None,
-        timeout_sec: Union[None, int, params.Expression[int], options.Sentinel] = None,
-        min_instances: Union[None, int, params.Expression[int], options.Sentinel] = None,
-        max_instances: Union[None, int, params.Expression[int], options.Sentinel] = None,
-        vpc: Union[None, options.VpcOptions, options.Sentinel] = None,
-        ingress: Union[None, options.IngressSettings, options.Sentinel] = None,
-        service_account: Union[None, str, params.Expression[str], options.Sentinel] = None,
-        secrets: Union[
-            None, Sequence[str], params.Expression[Iterable[str]], options.Sentinel
-        ] = None,
+    func: Callable[[Event[PublishedDbData[T]]], None] = None,
+    *,
+    reference: Union[str, params.Expression[str]],
+    instance: Union[None, str, params.Expression[str], options.Sentinel] = None,
+    region: Union[None, str, params.Expression[str], options.Sentinel] = None,
+    memory: Union[None, int, params.Expression[int], options.Sentinel] = None,
+    timeout_sec: Union[None, int, params.Expression[int], options.Sentinel] = None,
+    min_instances: Union[None, int, params.Expression[int], options.Sentinel] = None,
+    max_instances: Union[None, int, params.Expression[int], options.Sentinel] = None,
+    concurrency: Union[None, int, options.Sentinel] = None,
+    cpu: Union[None, int, str, options.Sentinel] = "gcf_gen1",
+    vpc_connector_egress_settings: Union[
+        None, int, options.VpcEgressSettings, options.Sentinel
+    ] = None,
+    vpc: Union[None, options.VpcOptions, options.Sentinel] = None,
+    ingress: Union[None, options.IngressSettings, options.Sentinel] = None,
+    service_account: Union[None, str, params.Expression[str], options.Sentinel] = None,
+    secrets: Union[
+        None, Sequence[str], params.Expression[Iterable[str]], options.Sentinel
+    ] = None,
+    retry: Union[None, bool, params.BoolParam] = None,
+    labels: Union[str, params.Expression[str]] = None,
 ) -> Callable[[Event[object]], None]:
     """Decorator for a function that can handle new values being added to the Realtime Database.
 
@@ -339,27 +395,91 @@ def on_value_created(
     To reset an attribute to factory default, use RESET_ATTRIBUTE
     """
 
-    def todo(event: Event[object]):
-        pass
+    reference_options = options.ReferenceOptions(
+        reference=reference,
+        instance=instance,
+        region=region,
+        memory=memory,
+        timeout_sec=timeout_sec,
+        min_instances=min_instances,
+        max_instances=max_instances,
+        vpc=vpc,
+        ingress=ingress,
+        service_account=service_account,
+        secrets=secrets,
+        concurrency=concurrency,
+        cpu=cpu,
+        vpc_connector_egress_settings=vpc_connector_egress_settings,
+        retry=retry,
+        labels=labels,
+    )
 
-    return todo
+    trigger = {} if reference_options is None else reference_options.metadata()
+
+    def wrapper(func):
+        @functools.wraps(func)
+        def db_view_func(data: ce.CloudEvent):
+            return db_wrap_handler(
+                func=func,
+                raw=data,
+            )
+
+        project = os.environ.get("GCLOUD_PROJECT")
+
+        manifest = ManifestEndpoint(
+            entryPoint=func.__name__,
+            eventTrigger=EventTrigger(
+                eventType="google.firebase.database.ref.v1.created",
+                eventFilters={
+                    "reference": f"projects/{project}/reference/{reference}",
+                },
+                retry=reference_options.retry,
+            ),
+            region=reference_options.region,
+            availableMemoryMb=reference_options.memory,
+            timeoutSeconds=reference_options.timeout_sec,
+            minInstances=reference_options.min_instances,
+            maxInstances=reference_options.max_instances,
+            vpc=reference_options.vpc,
+            ingressSettings=reference_options.ingress,
+            serviceAccount=reference_options.service_account,
+            secretEnvironmentVariables=reference_options.secrets,
+        )
+
+        db_view_func.__firebase_trigger__ = trigger
+        db_view_func.__firebase_endpoint__ = manifest
+
+        return db_view_func
+
+    if func is None:
+        return wrapper
+
+    return wrapper(func)
 
 
 def on_value_deleted(
-        *,
-        reference: Union[str, params.Expression[str]],
-        instance: Union[None, str, params.Expression[str], options.Sentinel] = None,
-        region: Union[None, str, params.Expression[str], options.Sentinel] = None,
-        memory: Union[None, int, params.Expression[int], options.Sentinel] = None,
-        timeout_sec: Union[None, int, params.Expression[int], options.Sentinel] = None,
-        min_instances: Union[None, int, params.Expression[int], options.Sentinel] = None,
-        max_instances: Union[None, int, params.Expression[int], options.Sentinel] = None,
-        vpc: Union[None, options.VpcOptions, options.Sentinel] = None,
-        ingress: Union[None, options.IngressSettings, options.Sentinel] = None,
-        service_account: Union[None, str, params.Expression[str], options.Sentinel] = None,
-        secrets: Union[
-            None, Sequence[str], params.Expression[Iterable[str]], options.Sentinel
-        ] = None,
+    func: Callable[[Event[PublishedDbData[T]]], None] = None,
+    *,
+    reference: Union[str, params.Expression[str]],
+    instance: Union[None, str, params.Expression[str], options.Sentinel] = None,
+    region: Union[None, str, params.Expression[str], options.Sentinel] = None,
+    memory: Union[None, int, params.Expression[int], options.Sentinel] = None,
+    timeout_sec: Union[None, int, params.Expression[int], options.Sentinel] = None,
+    min_instances: Union[None, int, params.Expression[int], options.Sentinel] = None,
+    max_instances: Union[None, int, params.Expression[int], options.Sentinel] = None,
+    concurrency: Union[None, int, options.Sentinel] = None,
+    cpu: Union[None, int, str, options.Sentinel] = "gcf_gen1",
+    vpc_connector_egress_settings: Union[
+        None, int, options.VpcEgressSettings, options.Sentinel
+    ] = None,
+    vpc: Union[None, options.VpcOptions, options.Sentinel] = None,
+    ingress: Union[None, options.IngressSettings, options.Sentinel] = None,
+    service_account: Union[None, str, params.Expression[str], options.Sentinel] = None,
+    secrets: Union[
+        None, Sequence[str], params.Expression[Iterable[str]], options.Sentinel
+    ] = None,
+    retry: Union[None, bool, params.BoolParam] = None,
+    labels: Union[str, params.Expression[str]] = None,
 ) -> Callable[[Event[object]], None]:
     """Decorator for a function that can handle values being deleted from the Realtime Database.
 
@@ -392,8 +512,28 @@ def on_value_deleted(
 
     To reset an attribute to factory default, use RESET_ATTRIBUTE
     """
+    reference_options = options.ReferenceOptions(
+        reference=reference,
+        instance=instance,
+        region=region,
+        memory=memory,
+        timeout_sec=timeout_sec,
+        min_instances=min_instances,
+        max_instances=max_instances,
+        vpc=vpc,
+        ingress=ingress,
+        service_account=service_account,
+        secrets=secrets,
+        concurrency=concurrency,
+        cpu=cpu,
+        vpc_connector_egress_settings=vpc_connector_egress_settings,
+        retry=retry,
+        labels=labels,
+    )
 
-    def todo(event: Event[object]):
+    trigger = {} if reference_options is None else reference_options.metadata()
+
+    def todo(event: Event[Change]):
         pass
 
     return todo

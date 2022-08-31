@@ -90,6 +90,16 @@ def wrap_pubsub_trigger(trig):
     return wrapper
 
 
+def wrap_db_trigger(trig):
+    def wrapper():
+        data = request.get_json(force=True)
+        trig(data)
+        print(data, 20 * "HERE")
+        return jsonify({})
+
+    return wrapper
+
+
 def clean_nones_and_set_defult(data) -> dict:
     def convert_value(obj):
         if isinstance(obj, Enum):
@@ -107,6 +117,7 @@ def is_valid_trigger(trigger: ManifestEndpoint) -> bool:
         is_http_trigger(trigger)
         or is_callable_trigger(trigger)
         or is_pubsub_trigger(trigger)
+        or is_db_trigger(trigger)
     )
 
 
@@ -168,6 +179,17 @@ def is_pubsub_trigger(endpoint: ManifestEndpoint) -> bool:
     )
 
 
+def is_db_trigger(endpoint: ManifestEndpoint) -> bool:
+    return (
+        endpoint.eventTrigger is not None
+        and endpoint.eventTrigger["eventType"]
+        == "google.firebase.database.ref.v1.written"
+        or "google.firebase.database.ref.v1.created"
+        or "google.firebase.database.ref.v1.updated"
+        or "google.firebase.database.ref.v1.deleted"
+    )
+
+
 def serve_triggers(triggers: dict[str, Callable]) -> Flask:
     """
     Start serving all triggers provided by the user locally.
@@ -198,6 +220,13 @@ def serve_triggers(triggers: dict[str, Callable]) -> Flask:
                 f"/{name}",
                 endpoint=name,
                 view_func=wrap_pubsub_trigger(trigger),
+                methods=["POST"],
+            )
+        elif is_db_trigger(endpoint):
+            app.add_url_rule(
+                f"/{name}",
+                endpoint=name,
+                view_func=wrap_db_trigger(trigger),
                 methods=["POST"],
             )
         else:

@@ -90,6 +90,7 @@ class GlobalOptions:
     allowed_methods: Union[
         StringParam, str, None
     ] = None  # TODO should we add Sentinel?
+    allow_invalid_app_check_token: Union[StringParam, str, None] = None
     region: Union[StringParam, str, None] = None  # TODO should we add Sentinel?
     memory: Union[Memory, IntParam, int, Sentinel, None] = None
     timeout_sec: Union[IntParam, int, Sentinel, None] = None
@@ -110,6 +111,7 @@ class GlobalOptions:
             "instance": self.instance,
             "allowed_origins": self.allowed_methods,
             "allowed_methods": self.allowed_methods,
+            "allow_invalid_app_check_token": self.allow_invalid_app_check_token,
             "region": self.region,
             "memory": self.memory,
             "timeout_sec": self.timeout_sec,
@@ -121,7 +123,7 @@ class GlobalOptions:
             "vpc": self.vpc,
             "ingress": self.ingress,
             "service_account": self.service_account,
-            "labels": self.labels
+            "labels": self.labels,
         }
 
 
@@ -150,19 +152,19 @@ class HttpsOptions(GlobalOptions):
     allow_invalid_app_check_token: Optional[bool] = None
 
     def __init__(
-            self,
-            max_instances=None,
-            min_instances=None,
-            timeout_sec=None,
-            memory=None,
-            region=None,
-            allowed_origins=None,
-            allowed_methods=None,
-            service_account=None,
-            vpc=None,
-            ingress=None,
-            secrets=None,
-            allow_invalid_app_check_token=None,
+        self,
+        max_instances=None,
+        min_instances=None,
+        timeout_sec=None,
+        memory=None,
+        region=None,
+        allowed_origins=None,
+        allowed_methods=None,
+        service_account=None,
+        vpc=None,
+        ingress=None,
+        secrets=None,
+        allow_invalid_app_check_token=None,
     ):
         super().__init__()
         self.max_instances = max_instances or GLOBAL_OPTIONS.max_instances
@@ -203,20 +205,20 @@ class PubSubOptions(GlobalOptions):
     retry: Optional[bool] = None
 
     def __init__(
-            self,
-            max_instances=None,
-            min_instances=None,
-            timeout_sec=None,
-            memory=None,
-            region=None,
-            allowed_origins=None,
-            allowed_methods=None,
-            service_account=None,
-            vpc=None,
-            ingress=None,
-            secrets=None,
-            topic=None,
-            retry=None,
+        self,
+        max_instances=None,
+        min_instances=None,
+        timeout_sec=None,
+        memory=None,
+        region=None,
+        allowed_origins=None,
+        allowed_methods=None,
+        service_account=None,
+        vpc=None,
+        ingress=None,
+        secrets=None,
+        topic=None,
+        retry=None,
     ):
         super().__init__()
 
@@ -257,26 +259,26 @@ class ReferenceOptions(GlobalOptions):
     allow_invalid_app_check_token: Optional[bool] = None
 
     def __init__(
-            self,
-            reference=None,
-            instance=None,
-            region=None,
-            memory=None,
-            timeout_sec=None,
-            min_instances=None,
-            max_instances=None,
-            concurrency=None,
-            cpu=None,
-            vpc_connector_egress_settings=None,
-            service_account=None,
-            labels=None,
-            allowed_origins=None,
-            allowed_methods=None,
-            vpc=None,
-            ingress=None,
-            secrets=None,
-            retry=None,
-            allow_invalid_app_check_token=None,
+        self,
+        reference=None,
+        instance=None,
+        region=None,
+        memory=None,
+        timeout_sec=None,
+        min_instances=None,
+        max_instances=None,
+        concurrency=None,
+        cpu=None,
+        vpc_connector_egress_settings=None,
+        service_account=None,
+        labels=None,
+        allowed_origins=None,
+        allowed_methods=None,
+        vpc=None,
+        ingress=None,
+        secrets=None,
+        retry=None,
+        allow_invalid_app_check_token=None,
     ):
         super().__init__()
         self.reference = reference or GLOBAL_OPTIONS.reference
@@ -289,8 +291,8 @@ class ReferenceOptions(GlobalOptions):
         self.concurrency = concurrency or GLOBAL_OPTIONS.concurrency
         self.cpu = cpu or GLOBAL_OPTIONS.cpu
         self.vpc_connector_egress_settings = (
-                vpc_connector_egress_settings
-                or GLOBAL_OPTIONS.vpc_connector_egress_settings
+            vpc_connector_egress_settings
+            or GLOBAL_OPTIONS.vpc_connector_egress_settings
         )
         self.service_account = service_account or GLOBAL_OPTIONS.service_account
         self.labels = labels or GLOBAL_OPTIONS.labels
@@ -300,25 +302,35 @@ class ReferenceOptions(GlobalOptions):
         self.vpc = vpc or GLOBAL_OPTIONS.vpc
         self.secrets = secrets or GLOBAL_OPTIONS.secrets
         self.retry = retry or False
-        self.allow_invalid_app_check_token = allow_invalid_app_check_token
+        self.allow_invalid_app_check_token = (
+            allow_invalid_app_check_token
+            or GLOBAL_OPTIONS.allow_invalid_app_check_token
+        )
 
 
 def set_global_options(
-        *,
-        reference: Union[str, Expression[str]] = None,
-        instance: Union[None, str, Expression[str], Sentinel] = None,
-        region: Optional[str] = None,
-        memory: Union[None, int, Sentinel] = None,
-        timeout_sec: Union[None, int, Sentinel] = None,
-        min_instances: Union[None, int, Sentinel] = None,
-        max_instances: Union[None, int, Sentinel] = None,
-        concurrency: Union[None, int, Sentinel] = None,
-        cpu: Union[None, int, str, Sentinel] = "gcf_gen1",
-        vpc_connector_egress_settings: Union[None, int, VpcEgressSettings, Sentinel] = None,
-        vpc: Union[None, VpcOptions, Sentinel] = None,
-        ingress: Union[None, IngressSettings, Sentinel] = None,
-        service_account: Union[None, str, Sentinel] = None,
-        labels: Union[str, Expression[str]] = None
+    *,
+    reference: Union[str, Expression[str]] = None,
+    instance: Union[None, str, Expression[str], Sentinel] = None,
+    region: Optional[str] = None,
+    memory: Union[None, int, Sentinel] = None,
+    timeout_sec: Union[None, int, Sentinel] = None,
+    min_instances: Union[None, int, Sentinel] = None,
+    max_instances: Union[None, int, Sentinel] = None,
+    concurrency: Union[None, int, Sentinel] = None,
+    cpu: Union[None, int, str, Sentinel] = "gcf_gen1",
+    vpc_connector_egress_settings: Union[None, int, VpcEgressSettings, Sentinel] = None,
+    vpc: Union[None, VpcOptions, Sentinel] = None,
+    ingress: Union[None, IngressSettings, Sentinel] = None,
+    service_account: Union[None, str, Sentinel] = None,
+    labels: Union[str, Expression[str]] = None,
+    allowed_origins: Union[
+        StringParam, str, None
+    ] = None,  # TODO should we add Sentinel?
+    allowed_methods: Union[
+        StringParam, str, None
+    ] = None,  # TODO should we add Sentinel?
+    allow_invalid_app_check_token: Union[StringParam, str, None] = None
 ):
     global GLOBAL_OPTIONS
     GLOBAL_OPTIONS = GlobalOptions(
@@ -335,5 +347,8 @@ def set_global_options(
         vpc=vpc,
         ingress=ingress,
         service_account=service_account,
-        labels=labels
+        labels=labels,
+        allowed_origins=allowed_origins,
+        allowed_methods=allowed_methods,
+        allow_invalid_app_check_token=allow_invalid_app_check_token,
     )
