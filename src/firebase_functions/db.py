@@ -54,11 +54,11 @@ class Change:
 
 
 @dataclass(frozen=True)
-class Event(CloudEvent[T]):
+class DbEvent(CloudEvent[T]):
     """Make event"""
 
     firebase_database_host: str
-    instance: params.StringParam
+    instance: str
     reference: str
     location: str
     params: Dict[str, str]
@@ -103,10 +103,9 @@ class PublishedDbData(Generic[T]):
 
 
 def db_wrap_handler(
-    func: Callable[[Event[PublishedDbData[T]]], None],
+    func: Callable[[DbEvent[PublishedDbData[T]]], None],
     raw: Union[ce.CloudEvent, dict],
 ) -> flask.Response:
-
     """Database warp handler"""
     # If the call is coming from tests, the raw comes through as a dict,
     # therefore we need to convert it to a CloudEvent.
@@ -151,7 +150,7 @@ def db_wrap_handler(
 
     event_dict["data"] = data2
 
-    event: Event[PublishedDbData] = Event(**event_dict)
+    event: DbEvent[PublishedDbData] = DbEvent(**event_dict)
 
     func(event)
     response = flask.jsonify(status=200)
@@ -159,7 +158,7 @@ def db_wrap_handler(
 
 
 def on_value_written(
-    func: Callable[[Event[PublishedDbData[T]]], None] = None,
+    func: Callable[[DbEvent[PublishedDbData[T]]], None] = None,
     *,
     reference: Union[str, params.Expression[str]],
     instance: Union[None, str, params.Expression[str], options.Sentinel] = None,
@@ -181,7 +180,7 @@ def on_value_written(
     ] = None,
     retry: Union[None, bool, params.BoolParam] = None,
     labels: Union[str, params.Expression[str]] = None,
-) -> Callable[[Event[object]], None]:
+) -> Callable[[DbEvent[object]], None]:
     """Decorator for a function that can handle write to the Realtime Database.
 
     Parameters:
@@ -278,7 +277,7 @@ def on_value_written(
 
 
 def on_value_updated(
-    func: Callable[[Event[PublishedDbData[T]]], None] = None,
+    func: Callable[[DbEvent[PublishedDbData[T]]], None] = None,
     *,
     reference: Union[str, params.Expression[str]],
     instance: Union[None, str, params.Expression[str], options.Sentinel] = None,
@@ -300,7 +299,7 @@ def on_value_updated(
     ] = None,
     retry: Union[None, bool, params.BoolParam] = None,
     labels: Union[str, params.Expression[str]] = None,
-) -> Callable[[Event[object]], None]:
+) -> Callable[[DbEvent[object]], None]:
     """Decorator for a function that can handle an existing value changing in the Realtime Database.
 
     Parameters:
@@ -332,15 +331,37 @@ def on_value_updated(
 
     To reset an attribute to factory default, use RESET_ATTRIBUTE
     """
+    # test for empty parameters
 
-    def todo(event: Event[Change]):
+    # reference_options = options.ReferenceOptions(
+    #     reference=reference,
+    #     instance=instance,
+    #     region=region,
+    #     memory=memory,
+    #     timeout_sec=timeout_sec,
+    #     min_instances=min_instances,
+    #     max_instances=max_instances,
+    #     vpc=vpc,
+    #     ingress=ingress,
+    #     service_account=service_account,
+    #     secrets=secrets,
+    #     concurrency=concurrency,
+    #     cpu=cpu,
+    #     vpc_connector_egress_settings=vpc_connector_egress_settings,
+    #     retry=retry,
+    #     labels=labels,
+    # )
+
+    # trigger = {} if reference_options is None else reference_options.metadata()
+
+    def todo(event: DbEvent[Change]):
         pass
 
     return todo
 
 
 def on_value_created(
-    func: Callable[[Event[PublishedDbData[T]]], None] = None,
+    func: Callable[[DbEvent[PublishedDbData[T]]], None] = None,
     *,
     reference: Union[str, params.Expression[str]],
     instance: Union[None, str, params.Expression[str], options.Sentinel] = None,
@@ -362,7 +383,7 @@ def on_value_created(
     ] = None,
     retry: Union[None, bool, params.BoolParam] = None,
     labels: Union[str, params.Expression[str]] = None,
-) -> Callable[[Event[object]], None]:
+) -> Callable[[DbEvent[object]], None]:
     """Decorator for a function that can handle new values being added to the Realtime Database.
 
     Parameters:
@@ -458,7 +479,7 @@ def on_value_created(
 
 
 def on_value_deleted(
-    func: Callable[[Event[PublishedDbData[T]]], None] = None,
+    func: Callable[[DbEvent[PublishedDbData[T]]], None] = None,
     *,
     reference: Union[str, params.Expression[str]],
     instance: Union[None, str, params.Expression[str], options.Sentinel] = None,
@@ -480,7 +501,7 @@ def on_value_deleted(
     ] = None,
     retry: Union[None, bool, params.BoolParam] = None,
     labels: Union[str, params.Expression[str]] = None,
-) -> Callable[[Event[object]], None]:
+) -> Callable[[DbEvent[object]], None]:
     """Decorator for a function that can handle values being deleted from the Realtime Database.
 
     Parameters:
@@ -512,28 +533,30 @@ def on_value_deleted(
 
     To reset an attribute to factory default, use RESET_ATTRIBUTE
     """
-    reference_options = options.ReferenceOptions(
-        reference=reference,
-        instance=instance,
-        region=region,
-        memory=memory,
-        timeout_sec=timeout_sec,
-        min_instances=min_instances,
-        max_instances=max_instances,
-        vpc=vpc,
-        ingress=ingress,
-        service_account=service_account,
-        secrets=secrets,
-        concurrency=concurrency,
-        cpu=cpu,
-        vpc_connector_egress_settings=vpc_connector_egress_settings,
-        retry=retry,
-        labels=labels,
-    )
+    # test for empty parameters
 
-    trigger = {} if reference_options is None else reference_options.metadata()
+    # reference_options = options.ReferenceOptions(
+    #     reference=reference,
+    #     instance=instance,
+    #     region=region,
+    #     memory=memory,
+    #     timeout_sec=timeout_sec,
+    #     min_instances=min_instances,
+    #     max_instances=max_instances,
+    #     vpc=vpc,
+    #     ingress=ingress,
+    #     service_account=service_account,
+    #     secrets=secrets,
+    #     concurrency=concurrency,
+    #     cpu=cpu,
+    #     vpc_connector_egress_settings=vpc_connector_egress_settings,
+    #     retry=retry,
+    #     labels=labels,
+    # )
 
-    def todo(event: Event[Change]):
+    # trigger = {} if reference_options is None else reference_options.metadata()
+
+    def todo(event: DbEvent[Change]):
         pass
 
     return todo

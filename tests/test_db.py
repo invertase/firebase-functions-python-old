@@ -1,7 +1,7 @@
 """Test RTDB(Real Time Data Base) functions"""
+
 import datetime as dt
 
-import cloudevents.http
 import yaml
 
 from firebase_functions import options, params
@@ -11,7 +11,7 @@ from firebase_functions.db import (
     on_value_updated,
     on_value_created,
     on_value_deleted,
-    Event,
+    DbEvent,
     Change,
     PublishedDbData,
 )
@@ -51,7 +51,7 @@ raw_db_event = {
 @on_value_written(
     reference="foo/bar",
 )
-def on_value_written_function(event: Event[Change]):
+def on_value_written_function(event: DbEvent[Change]):
     """Test on data published function"""
     assert isinstance(event.time, dt.datetime), "Event time is not a datetime object"
     assert event.time.date() == dt.date(
@@ -83,7 +83,7 @@ def function_on_value_updated():
     region="europe-west2",
     ingress=options.USE_DEFAULT,
 )
-def on_value_created_function(event: Event[PublishedDbData]):
+def on_value_created_function(event: DbEvent[PublishedDbData]):
     """function_on_value_created"""
     assert isinstance(event.time, dt.datetime), "Event time is not a datetime object"
     assert event.time.date() == dt.date(
@@ -117,12 +117,13 @@ triggers = {
 def test_db_spec():
     """Test database specs"""
     with serve_admin(triggers=triggers).test_client() as client:
-        for test_func in triggers.keys():
+        for test_func in triggers:
             assert (
                 client.get("/__/functions.yaml").status_code == 200
             ), "Failure, response status code !=200"
             assert (
-                yaml.safe_load(client.get("/__/functions.yaml").get_data())
-                ["endpoints"][test_func.replace("_", "")]["eventTrigger"]
+                yaml.safe_load(client.get("/__/functions.yaml").get_data())[
+                    "endpoints"
+                ][test_func.replace("_", "")]["eventTrigger"]
                 is not None
             ), "Failure, eventTrigger is none "

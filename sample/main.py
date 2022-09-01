@@ -9,7 +9,7 @@ from firebase_functions.https import (
     Request,
     CallableRequest,
 )
-from firebase_functions.pubsub import on_message_published, CloudEventMessage
+from firebase_functions.pubsub import on_message_published, CloudEvent
 
 options.set_global_options(max_instances=3)
 
@@ -52,7 +52,7 @@ def httpcallablefunction(req: CallableRequest):
     memory=options.Memory.MB_256,
     region="europe-west-3",
 )
-def pubsub_function(message: CloudEventMessage):
+def pubsub_function(message: CloudEvent):
 
     debug("Debugging pubsub_function")
     debug(f"Data: {message}")
