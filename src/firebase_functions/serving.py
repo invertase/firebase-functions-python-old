@@ -112,7 +112,6 @@ def clean_nones_and_set_defult(data) -> dict:
 
 
 def is_valid_trigger(trigger: ManifestEndpoint) -> bool:
-    print(is_db_trigger(trigger))
     return (
         is_http_trigger(trigger)
         or is_callable_trigger(trigger)
