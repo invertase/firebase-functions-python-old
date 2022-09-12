@@ -11,7 +11,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Module for Cloud Functions that are triggered by the Firebase Realtime Database."""
 import functools
 import os
@@ -168,15 +167,11 @@ def on_value_written(
     max_instances: Union[None, int, params.Expression[int], options.Sentinel] = None,
     concurrency: Union[None, int, options.Sentinel] = None,
     cpu: Union[None, int, str, options.Sentinel] = "gcf_gen1",
-    vpc_connector_egress_settings: Union[
-        None, options.VpcEgressSettings, options.Sentinel
-    ] = None,
+    vpc_connector_egress_settings: Union[None, options.VpcEgressSettings, options.Sentinel] = None,
     vpc: Union[None, options.VpcOptions, options.Sentinel] = None,
     ingress: Union[None, options.IngressSettings, options.Sentinel] = None,
     service_account: Union[None, str, params.Expression[str], options.Sentinel] = None,
-    secrets: Union[
-        None, Sequence[str], params.Expression[Iterable[str]], options.Sentinel
-    ] = None,
+    secrets: Union[None, Sequence[str], params.Expression[Iterable[str]], options.Sentinel] = None,
     retry: Union[None, bool, params.BoolParam] = None,
     labels: Union[str, params.Expression[str]] = None,
 ) -> Callable[[DbEvent[object]], None]:
@@ -235,6 +230,7 @@ def on_value_written(
     trigger = {} if reference_options is None else reference_options.metadata()
 
     def wrapper(func):
+
         @functools.wraps(func)
         def db_view_func(data: ce.CloudEvent):
             return db_wrap_handler(
@@ -248,9 +244,14 @@ def on_value_written(
             entryPoint=func.__name__,
             eventTrigger=EventTrigger(
                 eventType="google.firebase.database.ref.v1.written",
-                eventFilters={
-                    "reference": f"projects/{project}/reference/{reference}",
+                # TODO path patterns should be handled
+                # https://github.com/firebase/firebase-functions/blob/d592847517c93b9240fbd2598bdf3dfefdb85948/src/utilities/path-pattern.ts#L100
+                # https://github.com/firebase/firebase-functions/blob/d592847517c93b9240fbd2598bdf3dfefdb85948/src/v2/providers/database.ts#L425-L432
+                eventFilters={},
+                eventFilterPathPatterns={
+                    "ref": f"projects/{project}/reference/{reference}",
                 },
+                # TODO this seems to be false in all cases, see https://github.com/firebase/firebase-functions/blob/d592847517c93b9240fbd2598bdf3dfefdb85948/src/v2/providers/database.ts#L446
                 retry=reference_options.retry,
             ),
             region=reference_options.region,
@@ -288,15 +289,11 @@ def on_value_updated(
     max_instances: Union[None, int, params.Expression[int], options.Sentinel] = None,
     concurrency: Union[None, int, options.Sentinel] = None,
     cpu: Union[None, int, str, options.Sentinel] = "gcf_gen1",
-    vpc_connector_egress_settings: Union[
-        None, options.VpcEgressSettings, options.Sentinel
-    ] = None,
+    vpc_connector_egress_settings: Union[None, options.VpcEgressSettings, options.Sentinel] = None,
     vpc: Union[None, options.VpcOptions, options.Sentinel] = None,
     ingress: Union[None, options.IngressSettings, options.Sentinel] = None,
     service_account: Union[None, str, params.Expression[str], options.Sentinel] = None,
-    secrets: Union[
-        None, Sequence[str], params.Expression[Iterable[str]], options.Sentinel
-    ] = None,
+    secrets: Union[None, Sequence[str], params.Expression[Iterable[str]], options.Sentinel] = None,
     retry: Union[None, bool, params.BoolParam] = None,
     labels: Union[str, params.Expression[str]] = None,
 ) -> Callable[[DbEvent[object]], None]:
@@ -331,6 +328,7 @@ def on_value_updated(
 
     To reset an attribute to factory default, use RESET_ATTRIBUTE
     """
+
     # test for empty parameters
 
     # reference_options = options.ReferenceOptions(
@@ -372,15 +370,11 @@ def on_value_created(
     max_instances: Union[None, int, params.Expression[int], options.Sentinel] = None,
     concurrency: Union[None, int, options.Sentinel] = None,
     cpu: Union[None, int, str, options.Sentinel] = "gcf_gen1",
-    vpc_connector_egress_settings: Union[
-        None, options.VpcEgressSettings, options.Sentinel
-    ] = None,
+    vpc_connector_egress_settings: Union[None, options.VpcEgressSettings, options.Sentinel] = None,
     vpc: Union[None, options.VpcOptions, options.Sentinel] = None,
     ingress: Union[None, options.IngressSettings, options.Sentinel] = None,
     service_account: Union[None, str, params.Expression[str], options.Sentinel] = None,
-    secrets: Union[
-        None, Sequence[str], params.Expression[Iterable[str]], options.Sentinel
-    ] = None,
+    secrets: Union[None, Sequence[str], params.Expression[Iterable[str]], options.Sentinel] = None,
     retry: Union[None, bool, params.BoolParam] = None,
     labels: Union[str, params.Expression[str]] = None,
 ) -> Callable[[DbEvent[object]], None]:
@@ -438,6 +432,7 @@ def on_value_created(
     trigger = {} if reference_options is None else reference_options.metadata()
 
     def wrapper(func):
+
         @functools.wraps(func)
         def db_view_func(data: ce.CloudEvent):
             return db_wrap_handler(
@@ -491,15 +486,11 @@ def on_value_deleted(
     max_instances: Union[None, int, params.Expression[int], options.Sentinel] = None,
     concurrency: Union[None, int, options.Sentinel] = None,
     cpu: Union[None, int, str, options.Sentinel] = "gcf_gen1",
-    vpc_connector_egress_settings: Union[
-        None, options.VpcEgressSettings, options.Sentinel
-    ] = None,
+    vpc_connector_egress_settings: Union[None, options.VpcEgressSettings, options.Sentinel] = None,
     vpc: Union[None, options.VpcOptions, options.Sentinel] = None,
     ingress: Union[None, options.IngressSettings, options.Sentinel] = None,
     service_account: Union[None, str, params.Expression[str], options.Sentinel] = None,
-    secrets: Union[
-        None, Sequence[str], params.Expression[Iterable[str]], options.Sentinel
-    ] = None,
+    secrets: Union[None, Sequence[str], params.Expression[Iterable[str]], options.Sentinel] = None,
     retry: Union[None, bool, params.BoolParam] = None,
     labels: Union[str, params.Expression[str]] = None,
 ) -> Callable[[DbEvent[object]], None]:
@@ -534,6 +525,7 @@ def on_value_deleted(
 
     To reset an attribute to factory default, use RESET_ATTRIBUTE
     """
+
     # test for empty parameters
 
     # reference_options = options.ReferenceOptions(
