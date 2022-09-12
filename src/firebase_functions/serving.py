@@ -81,7 +81,16 @@ def wrap_http_trigger(trig: Callable) -> Callable:
     return wrapper
 
 
-def wrap_pubsub_trigger(trig):
+def warp_pubsub_trigger(trig):
+    def wrapper():
+        data = request.get_json(force=True)
+        trig(data)
+        return jsonify({})
+
+    return wrapper
+
+
+def wrap_db_trigger(trig):
     def wrapper():
         data = request.get_json(force=True)
         trig(data)
@@ -94,7 +103,7 @@ def clean_nones_and_set_defult(data) -> dict:
     def convert_value(obj):
         if isinstance(obj, Enum):
             return obj.value
-        elif isinstance(obj, Sentinel):
+        if isinstance(obj, Sentinel):
             return None
 
         return obj
@@ -107,6 +116,7 @@ def is_valid_trigger(trigger: ManifestEndpoint) -> bool:
         is_http_trigger(trigger)
         or is_callable_trigger(trigger)
         or is_pubsub_trigger(trigger)
+        or is_db_trigger(trigger)
     )
 
 
@@ -121,9 +131,9 @@ def triggers_as_yaml(triggers: dict) -> str:
 
         if not is_valid_trigger(trigger):
             continue
-        else:
-            # Lowercase the name of the function and replace '_' to support CF naming.
-            endpoints[name.replace("_", "").lower()] = trigger
+
+        # Lowercase the name of the function and replace '_' to support CF naming.
+        endpoints[name.replace("_", "").lower()] = trigger
 
     manifest_yaml = dump(
         dataclasses.asdict(
@@ -168,6 +178,15 @@ def is_pubsub_trigger(endpoint: ManifestEndpoint) -> bool:
     )
 
 
+def is_db_trigger(endpoint: ManifestEndpoint) -> bool:
+    return endpoint.eventTrigger is not None and endpoint.eventTrigger["eventType"] in (
+        "google.firebase.database.ref.v1.written",
+        "google.firebase.database.ref.v1.created",
+        "google.firebase.database.ref.v1.updated",
+        "google.firebase.database.ref.v1.deleted",
+    )
+
+
 def serve_triggers(triggers: dict[str, Callable]) -> Flask:
     """
     Start serving all triggers provided by the user locally.
@@ -197,7 +216,14 @@ def serve_triggers(triggers: dict[str, Callable]) -> Flask:
             app.add_url_rule(
                 f"/{name}",
                 endpoint=name,
-                view_func=wrap_pubsub_trigger(trigger),
+                view_func=warp_pubsub_trigger(trigger),
+                methods=["POST"],
+            )
+        elif is_db_trigger(endpoint):
+            app.add_url_rule(
+                f"/{name}",
+                endpoint=name,
+                view_func=wrap_db_trigger(trigger),
                 methods=["POST"],
             )
         else:

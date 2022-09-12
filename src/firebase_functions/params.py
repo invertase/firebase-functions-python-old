@@ -29,6 +29,7 @@ class SelectOption(Generic[T]):
 @dataclass(frozen=True)
 class TextInput(Input[T]):
     """Text for input T"""
+
     example: Optional[T] = None
     validation_regex: Optional[str] = None
     validation_error_message: Optional[str] = None
@@ -45,6 +46,7 @@ class TextInput(Input[T]):
 @dataclass(frozen=True)
 class SelectInput(Input[T]):
     """Selection of input T"""
+
     options: Union[Sequence[T], Sequence[SelectOption[T]]]
     """Input for this parameter should select from a predefined set of options.
 
@@ -99,7 +101,6 @@ class Expression(abc.ABC, Generic[E]):
     @abc.abstractmethod
     def expression(self) -> str:
         """Returns the CEL for this expression"""
-
 
     def __str__(self) -> str:
         """Returns the full expression in a {{ }} escape sequence"""

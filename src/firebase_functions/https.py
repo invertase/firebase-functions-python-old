@@ -43,7 +43,7 @@ from firebase_functions.options import (
     IngressSettings,
     Sentinel,
 )
-
+from firebase_functions.utils import valid_request
 
 T = TypeVar("T")
 
@@ -338,70 +338,6 @@ def check_tokens(
     return verifications
 
 
-class ValidateRequest:
-    """Validate requests"""
-
-    def __int__(self, request: Request = None):
-        self.request = request
-
-    def valid_request(self) -> bool:
-        """Validate requests parameters"""
-        # The body must not be empty.
-        if self.request.json is None:
-            logging.warning("Request is missing body.")
-            return False
-
-        # Make sure it's a POST.
-        if self.request.method != "POST":
-            logging.warning("Request has invalid method.", self.request.method)
-            return False
-        return True
-
-    def valid_content(self) -> bool:
-        """Validate requests content"""
-
-        content_type: Optional[str] = self.request.headers.get("Content-Type")
-
-        if content_type is None:
-            logging.warning("Request is missing Content-Type.", content_type)
-            return False
-
-        # If it has a charset, just ignore it for now.
-        semi_colon=0
-        try:
-            semi_colon = content_type.index(";")
-            if semi_colon >= 0:
-                content_type = content_type[0:semi_colon].strip()
-        except ValueError:
-            pass
-        # Check that the Content-Type is JSON.
-        if content_type != "application/json":
-            logging.warning("Request has incorrect Content-Type.", content_type)
-            return False
-
-        # The body must have data.
-        if self.request.json["data"] is None:
-            # TODO should we check if data exists or not?
-            logging.warning("Request body is missing data.", self.request.json)
-            return False
-
-        # Verify that the body does not have any extra fields.
-        extra_keys = {
-            key[key]: self.request.json[key]
-            for key in self.request.json.keys()
-            if key != "data"
-        }
-
-        if len(extra_keys) != 0:
-            logging.warning(
-                "Request body has extra fields: ",
-                "".join(f"{key}: {value}," for (key, value) in extra_keys.items()),
-            )
-            return False
-
-        return True
-
-
 class HttpResponseBody:
     """The body of an HTTP response from a callable function."""
 
@@ -416,8 +352,8 @@ def wrap_on_call_handler(
     options: HttpsOptions,
 ) -> Response:
     try:
-        handler_request = ValidateRequest(request)
-        if not handler_request.valid_request() and handler_request.valid_content():
+
+        if not valid_request(request):
             logging.error("Invalid request, unable to process.")
             raise HttpsError(FunctionsErrorCode.INVALID_ARGUMENT, "Bad Request")
 

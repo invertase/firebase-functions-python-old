@@ -7,7 +7,7 @@ from enum import Enum
 from dataclasses import dataclass
 from typing import List, Optional, Union
 
-from firebase_functions.params import IntParam, SecretParam, StringParam
+from firebase_functions.params import IntParam, SecretParam, StringParam, Expression
 
 
 class Sentinel:
@@ -82,38 +82,52 @@ class GlobalOptions:
             the default compute service account.
     """
 
+    reference: Union[str, Expression[str]] = None
+    instance: Union[None, str, Expression[str], Sentinel] = None
     allowed_origins: Union[
         StringParam, str, None
     ] = None  # TODO should we add Sentinel?
     allowed_methods: Union[
         StringParam, str, None
     ] = None  # TODO should we add Sentinel?
+    allow_invalid_app_check_token: Union[StringParam, str, None] = None
     region: Union[StringParam, str, None] = None  # TODO should we add Sentinel?
     memory: Union[Memory, IntParam, int, Sentinel, None] = None
     timeout_sec: Union[IntParam, int, Sentinel, None] = None
     min_instances: Union[IntParam, int, Sentinel, None] = None
     max_instances: Union[None, IntParam, int, Sentinel] = None
+    concurrency: Union[None, int, IntParam, Sentinel] = None
+    cpu: Union[None, int, str, Sentinel] = "gcf_gen1"
+    vpc_connector_egress_settings: Union[None, VpcEgressSettings, Sentinel] = None
     vpc: Union[VpcOptions, Sentinel, None] = None
     ingress: Union[IngressSettings, Sentinel, None] = None
     service_account: Union[StringParam, str, Sentinel, None] = None
     secrets: Union[List[StringParam], SecretParam, Sentinel, None] = None
+    labels: Union[str, Expression[str]] = None
 
     def metadata(self):
         return {
+            "reference": self.reference,
+            "instance": self.instance,
             "allowed_origins": self.allowed_methods,
             "allowed_methods": self.allowed_methods,
+            "allow_invalid_app_check_token": self.allow_invalid_app_check_token,
             "region": self.region,
             "memory": self.memory,
             "timeout_sec": self.timeout_sec,
             "min_instances": self.min_instances,
             "max_instances": self.max_instances,
+            "concurrency": self.concurrency,
+            "cpu": self.cpu,
+            "vpc_connector_egress_settings": self.vpc_connector_egress_settings,
             "vpc": self.vpc,
             "ingress": self.ingress,
             "service_account": self.service_account,
+            "labels": self.labels,
         }
 
 
-global_options = GlobalOptions()
+GLOBAL_OPTIONS = GlobalOptions()
 
 
 class HttpsOptions(GlobalOptions):
@@ -153,17 +167,17 @@ class HttpsOptions(GlobalOptions):
         allow_invalid_app_check_token=None,
     ):
         super().__init__()
-        self.max_instances = max_instances or global_options.max_instances
-        self.allowed_methods = allowed_methods or global_options.allowed_methods
-        self.allowed_origins = allowed_origins or global_options.allowed_origins
-        self.ingress = ingress or global_options.ingress
-        self.region = region or global_options.region
-        self.memory = memory or global_options.memory
-        self.timeout_sec = timeout_sec or global_options.timeout_sec
-        self.min_instances = min_instances or global_options.min_instances
-        self.vpc = vpc or global_options.vpc
-        self.service_account = service_account or global_options.service_account
-        self.secrets = secrets or global_options.secrets
+        self.max_instances = max_instances or GLOBAL_OPTIONS.max_instances
+        self.allowed_methods = allowed_methods or GLOBAL_OPTIONS.allowed_methods
+        self.allowed_origins = allowed_origins or GLOBAL_OPTIONS.allowed_origins
+        self.ingress = ingress or GLOBAL_OPTIONS.ingress
+        self.region = region or GLOBAL_OPTIONS.region
+        self.memory = memory or GLOBAL_OPTIONS.memory
+        self.timeout_sec = timeout_sec or GLOBAL_OPTIONS.timeout_sec
+        self.min_instances = min_instances or GLOBAL_OPTIONS.min_instances
+        self.vpc = vpc or GLOBAL_OPTIONS.vpc
+        self.service_account = service_account or GLOBAL_OPTIONS.service_account
+        self.secrets = secrets or GLOBAL_OPTIONS.secrets
         self.allow_invalid_app_check_token = allow_invalid_app_check_token
 
 
@@ -208,40 +222,133 @@ class PubSubOptions(GlobalOptions):
     ):
         super().__init__()
 
-        self.max_instances = max_instances or global_options.max_instances
-        self.allowed_methods = allowed_methods or global_options.allowed_methods
-        self.allowed_origins = allowed_origins or global_options.allowed_origins
-        self.ingress = ingress or global_options.ingress
-        self.region = region or global_options.region
-        self.memory = memory or global_options.memory
-        self.timeout_sec = timeout_sec or global_options.timeout_sec
-        self.min_instances = min_instances or global_options.min_instances
-        self.vpc = vpc or global_options.vpc
-        self.service_account = service_account or global_options.service_account
-        self.secrets = secrets or global_options.secrets
+        self.max_instances = max_instances or GLOBAL_OPTIONS.max_instances
+        self.allowed_methods = allowed_methods or GLOBAL_OPTIONS.allowed_methods
+        self.allowed_origins = allowed_origins or GLOBAL_OPTIONS.allowed_origins
+        self.ingress = ingress or GLOBAL_OPTIONS.ingress
+        self.region = region or GLOBAL_OPTIONS.region
+        self.memory = memory or GLOBAL_OPTIONS.memory
+        self.timeout_sec = timeout_sec or GLOBAL_OPTIONS.timeout_sec
+        self.min_instances = min_instances or GLOBAL_OPTIONS.min_instances
+        self.vpc = vpc or GLOBAL_OPTIONS.vpc
+        self.service_account = service_account or GLOBAL_OPTIONS.service_account
+        self.secrets = secrets or GLOBAL_OPTIONS.secrets
         self.topic = topic
         self.retry = retry or False
 
 
+class ReferenceOptions(GlobalOptions):
+    """Options available for all function types in a codebase.
+
+    Attributes:
+        region: (StringParam) Region to deploy functions. Defaults to us-central1.
+        memory: MB to allocate to function. Defaults to Memory.MB_256
+        timeout_sec: Seconds before a function fails with a timeout error.
+            Defaults to 60s.
+        min_instances: Count of function instances that should be reserved at all
+            time. Instances will be billed while idle. Defaults to 0.
+        max_instances: Maximum count of function instances that can be created.
+            Defaults to 1000.
+        vpc: Configuration for a virtual private cloud. Defaults to no VPC.
+        ingress: Configuration for what IP addresses can invoke a function.
+            Defaults to all traffic.
+        service_account: The service account a function should run as. Defaults to
+            the default compute service account.
+    """
+
+    allow_invalid_app_check_token: Optional[bool] = None
+
+    def __init__(
+        self,
+        reference=None,
+        instance=None,
+        region=None,
+        memory=None,
+        timeout_sec=None,
+        min_instances=None,
+        max_instances=None,
+        concurrency=None,
+        cpu=None,
+        vpc_connector_egress_settings=None,
+        service_account=None,
+        labels=None,
+        allowed_origins=None,
+        allowed_methods=None,
+        vpc=None,
+        ingress=None,
+        secrets=None,
+        retry=None,
+        allow_invalid_app_check_token=None,
+    ):
+        super().__init__()
+        self.reference = reference or GLOBAL_OPTIONS.reference
+        self.instance = instance or GLOBAL_OPTIONS.instance
+        self.region = region or GLOBAL_OPTIONS.region
+        self.memory = memory or GLOBAL_OPTIONS.memory
+        self.timeout_sec = timeout_sec or GLOBAL_OPTIONS.timeout_sec
+        self.max_instances = max_instances or GLOBAL_OPTIONS.max_instances
+        self.min_instances = min_instances or GLOBAL_OPTIONS.min_instances
+        self.concurrency = concurrency or GLOBAL_OPTIONS.concurrency
+        self.cpu = cpu or GLOBAL_OPTIONS.cpu
+        self.vpc_connector_egress_settings = (
+            vpc_connector_egress_settings
+            or GLOBAL_OPTIONS.vpc_connector_egress_settings
+        )
+        self.service_account = service_account or GLOBAL_OPTIONS.service_account
+        self.labels = labels or GLOBAL_OPTIONS.labels
+        self.allowed_methods = allowed_methods or GLOBAL_OPTIONS.allowed_methods
+        self.allowed_origins = allowed_origins or GLOBAL_OPTIONS.allowed_origins
+        self.ingress = ingress or GLOBAL_OPTIONS.ingress
+        self.vpc = vpc or GLOBAL_OPTIONS.vpc
+        self.secrets = secrets or GLOBAL_OPTIONS.secrets
+        self.retry = retry or False
+        self.allow_invalid_app_check_token = (
+            allow_invalid_app_check_token
+            or GLOBAL_OPTIONS.allow_invalid_app_check_token
+        )
+
+
 def set_global_options(
     *,
+    reference: Union[str, Expression[str]] = None,
+    instance: Union[None, str, Expression[str], Sentinel] = None,
     region: Optional[str] = None,
     memory: Union[None, int, Sentinel] = None,
     timeout_sec: Union[None, int, Sentinel] = None,
     min_instances: Union[None, int, Sentinel] = None,
     max_instances: Union[None, int, Sentinel] = None,
+    concurrency: Union[None, int, Sentinel] = None,
+    cpu: Union[None, int, str, Sentinel] = "gcf_gen1",
+    vpc_connector_egress_settings: Union[None, int, VpcEgressSettings, Sentinel] = None,
     vpc: Union[None, VpcOptions, Sentinel] = None,
     ingress: Union[None, IngressSettings, Sentinel] = None,
     service_account: Union[None, str, Sentinel] = None,
+    labels: Union[str, Expression[str]] = None,
+    allowed_origins: Union[
+        StringParam, str, None
+    ] = None,  # TODO should we add Sentinel?
+    allowed_methods: Union[
+        StringParam, str, None
+    ] = None,  # TODO should we add Sentinel?
+    allow_invalid_app_check_token: Union[StringParam, str, None] = None
 ):
-    global global_options
-    global_options = GlobalOptions(
+    global GLOBAL_OPTIONS
+    GLOBAL_OPTIONS = GlobalOptions(
+        reference=reference,
+        instance=instance,
         region=region,
         memory=memory,
         timeout_sec=timeout_sec,
         min_instances=min_instances,
         max_instances=max_instances,
+        concurrency=concurrency,
+        cpu=cpu,
+        vpc_connector_egress_settings=vpc_connector_egress_settings,
         vpc=vpc,
         ingress=ingress,
         service_account=service_account,
+        labels=labels,
+        allowed_origins=allowed_origins,
+        allowed_methods=allowed_methods,
+        allow_invalid_app_check_token=allow_invalid_app_check_token,
     )

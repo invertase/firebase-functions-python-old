@@ -7,13 +7,14 @@ import pytest
 import yaml
 
 from firebase_functions import options
-from firebase_functions.https import Response, on_call, on_request
+from firebase_functions.https import on_call, on_request
 from firebase_functions.manifest import Manifest
 from firebase_functions.serving import (
     clean_nones_and_set_defult,
     serve_admin,
     serve_triggers,
 )
+from flask import Request, Response
 
 
 # Environment variable used for pubsub topic name.
@@ -30,15 +31,15 @@ os.environ["GCLOUD_PROJECT"] = "test-project"
         egress_settings=options.VpcEgressSettings.ALL_TRAFFIC,
     ),
 )
-def http_request_function(req, res: Response):
+def http_request_function(req: Request, res: Response):
     """Gather HTTP request response"""
-    res.set_data("Hello World!")
+    res.set_data(f"url = {req.url}")
 
 
 @on_call(memory=options.Memory.MB_256)
-def http_callable_function(req):
+def http_callable_function(req: Request):
     """Performs HTTP call"""
-    return "Hello World, again!"
+    return f"Auth = {req.auth}"
 
 
 triggers: dict = {
@@ -76,8 +77,8 @@ def test_trigger_view_func():
         )
 
         assert (
-            res_request.data.decode("utf-8") == "Hello World!"
-        ), 'Discrepancy found, response data != "Hello World!"'
+            res_request.data.decode("utf-8") == "url = http://localhost/http_request_function"
+        ), 'Discrepancy found, response data != "url = http://localhost/http_request_function"'
 
         res_call = client.post(
             "/http_callable_function",
@@ -88,8 +89,8 @@ def test_trigger_view_func():
         # Authenticated missing request
         assert (
             json.loads(res_call.data.decode("utf-8")).get("data")
-            == "Hello World, again!"
-        ), 'Unauthenticated response or found request, response data != "Hello World!, again!"'
+            == "Auth = None"
+        ), 'Unauthenticated response or found request, response "Auth != None"'
 
         res_call = client.post(
             "/http_callable_function",
