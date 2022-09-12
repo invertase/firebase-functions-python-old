@@ -251,7 +251,8 @@ def on_value_written(
                 eventFilterPathPatterns={
                     "ref": f"projects/{project}/reference/{reference}",
                 },
-                # TODO this seems to be false in all cases, see https://github.com/firebase/firebase-functions/blob/d592847517c93b9240fbd2598bdf3dfefdb85948/src/v2/providers/database.ts#L446
+                # TODO this seems to be false in all cases, see
+                # https://github.com/firebase/firebase-functions/blob/d592847517c93b9240fbd2598bdf3dfefdb85948/src/v2/providers/database.ts#L446
                 retry=reference_options.retry,
             ),
             region=reference_options.region,
