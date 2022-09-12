@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from typing import TypedDict, Optional, Union
 from typing_extensions import NotRequired
 
-from firebase_functions.options import Memory, Sentinel, VpcOptions
+from firebase_functions.options import Memory, Sentinel, VpcEgressSettings, VpcOptions
 from firebase_functions.params import IntParam, StringParam
 
 
@@ -23,7 +23,7 @@ class HttpsTrigger(TypedDict):
 
 
 class CallableTrigger(TypedDict):
-    pass
+    invoker: NotRequired[list[str]]
 
 
 class EventTrigger(TypedDict):
@@ -72,6 +72,7 @@ class ManifestEndpoint:
     timeoutSeconds: Optional[int] = None
     cpu: Union[int, str] = "gcf_gen1"
     vpc: Union[None, VpcOptions, Sentinel] = None
+    vpcConnectorEgressSettings: Optional[VpcEgressSettings] = None
     labels: Optional[dict[str, str]] = None
     ingressSettings: Optional[str] = None
     environmentVariables: Optional[dict] = None

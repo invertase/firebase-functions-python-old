@@ -15,6 +15,7 @@ from typing import Any, Callable, Generic, List, TypeVar, Union, Optional
 from firebase_functions.options import (
     PubSubOptions,
     Sentinel,
+    VpcEgressSettings,
     VpcOptions,
     Memory,
     IngressSettings,
@@ -46,7 +47,8 @@ class Message(Generic[T]):
             else:
                 return None
         except Exception as e:
-            raise Exception(f"Unable to parse Pub/Sub message data as JSON: {e}") from e
+            raise Exception(
+                f"Unable to parse Pub/Sub message data as JSON: {e}") from e
 
     def asdict(self) -> dict[str, Any]:
         dict_message: dict[str, Any] = {
@@ -134,6 +136,8 @@ def on_message_published(
     min_instances: Union[None, IntParam, int, Sentinel] = None,
     max_instances: Union[None, IntParam, int, Sentinel] = None,
     vpc: Union[None, VpcOptions, Sentinel] = None,
+    vpc_connector_egress_settings: Union[None, VpcEgressSettings,
+                                         Sentinel] = None,
     ingress: Union[None, IngressSettings, Sentinel] = None,
     service_account: Union[None, StringParam, str, Sentinel] = None,
     secrets: Union[None, List[StringParam], SecretParam, Sentinel] = None,
@@ -151,6 +155,7 @@ def on_message_published(
         min_instances=min_instances,
         max_instances=max_instances,
         vpc=vpc,
+        vpc_connector_egress_settings=vpc_connector_egress_settings,
         ingress=ingress,
         service_account=service_account,
         secrets=secrets,
@@ -160,6 +165,7 @@ def on_message_published(
     trigger = {} if pubsub_options is None else pubsub_options.metadata()
 
     def wrapper(func):
+
         @functools.wraps(func)
         def pubsub_view_func(data: ce.CloudEvent):
             return pubsub_wrap_handler(
@@ -184,6 +190,8 @@ def on_message_published(
             minInstances=pubsub_options.min_instances,
             maxInstances=pubsub_options.max_instances,
             vpc=pubsub_options.vpc,
+            vpcConnectorEgressSettings=pubsub_options.
+            vpc_connector_egress_settings,
             ingressSettings=pubsub_options.ingress,
             serviceAccount=pubsub_options.service_account,
             secretEnvironmentVariables=pubsub_options.secrets,

@@ -82,7 +82,7 @@ class GlobalOptions:
             the default compute service account.
     """
 
-    reference: Union[str, Expression[str]] = None
+    reference: Union[str, Expression[str], None] = None
     instance: Union[None, str, Expression[str], Sentinel] = None
     allowed_origins: Union[
         StringParam, str, None
@@ -90,7 +90,6 @@ class GlobalOptions:
     allowed_methods: Union[
         StringParam, str, None
     ] = None  # TODO should we add Sentinel?
-    allow_invalid_app_check_token: Union[StringParam, str, None] = None
     region: Union[StringParam, str, None] = None  # TODO should we add Sentinel?
     memory: Union[Memory, IntParam, int, Sentinel, None] = None
     timeout_sec: Union[IntParam, int, Sentinel, None] = None
@@ -103,7 +102,7 @@ class GlobalOptions:
     ingress: Union[IngressSettings, Sentinel, None] = None
     service_account: Union[StringParam, str, Sentinel, None] = None
     secrets: Union[List[StringParam], SecretParam, Sentinel, None] = None
-    labels: Union[str, Expression[str]] = None
+    labels: Union[str, Expression[str], None] = None
 
     def metadata(self):
         return {
@@ -111,7 +110,6 @@ class GlobalOptions:
             "instance": self.instance,
             "allowed_origins": self.allowed_methods,
             "allowed_methods": self.allowed_methods,
-            "allow_invalid_app_check_token": self.allow_invalid_app_check_token,
             "region": self.region,
             "memory": self.memory,
             "timeout_sec": self.timeout_sec,
@@ -149,7 +147,9 @@ class HttpsOptions(GlobalOptions):
             the default compute service account.
     """
 
-    allow_invalid_app_check_token: Optional[bool] = None
+    allow_invalid_app_check_token: Optional[bool] = False
+
+    invoker: Optional[list[str]] = None
 
     def __init__(
         self,
@@ -162,9 +162,11 @@ class HttpsOptions(GlobalOptions):
         allowed_methods=None,
         service_account=None,
         vpc=None,
+        vpc_connector_egress_settings=None,
         ingress=None,
         secrets=None,
-        allow_invalid_app_check_token=None,
+        allow_invalid_app_check_token=False,
+        invoker=None,
     ):
         super().__init__()
         self.max_instances = max_instances or GLOBAL_OPTIONS.max_instances
@@ -176,9 +178,20 @@ class HttpsOptions(GlobalOptions):
         self.timeout_sec = timeout_sec or GLOBAL_OPTIONS.timeout_sec
         self.min_instances = min_instances or GLOBAL_OPTIONS.min_instances
         self.vpc = vpc or GLOBAL_OPTIONS.vpc
+        self.vpc_connector_egress_settings = (
+            vpc_connector_egress_settings
+            or GLOBAL_OPTIONS.vpc_connector_egress_settings
+        )
         self.service_account = service_account or GLOBAL_OPTIONS.service_account
         self.secrets = secrets or GLOBAL_OPTIONS.secrets
         self.allow_invalid_app_check_token = allow_invalid_app_check_token
+        invoker_list = []
+        if invoker is not None:
+            if isinstance(invoker, str):
+                invoker_list.append(invoker)
+            else:
+                invoker_list.extend(invoker)
+        self.invoker = invoker_list
 
 
 class PubSubOptions(GlobalOptions):
@@ -215,6 +228,7 @@ class PubSubOptions(GlobalOptions):
         allowed_methods=None,
         service_account=None,
         vpc=None,
+        vpc_connector_egress_settings=None,
         ingress=None,
         secrets=None,
         topic=None,
@@ -231,6 +245,10 @@ class PubSubOptions(GlobalOptions):
         self.timeout_sec = timeout_sec or GLOBAL_OPTIONS.timeout_sec
         self.min_instances = min_instances or GLOBAL_OPTIONS.min_instances
         self.vpc = vpc or GLOBAL_OPTIONS.vpc
+        self.vpc_connector_egress_settings = (
+            vpc_connector_egress_settings
+            or GLOBAL_OPTIONS.vpc_connector_egress_settings
+        )
         self.service_account = service_account or GLOBAL_OPTIONS.service_account
         self.secrets = secrets or GLOBAL_OPTIONS.secrets
         self.topic = topic
@@ -256,7 +274,6 @@ class ReferenceOptions(GlobalOptions):
             the default compute service account.
     """
 
-    allow_invalid_app_check_token: Optional[bool] = None
 
     def __init__(
         self,
@@ -278,7 +295,6 @@ class ReferenceOptions(GlobalOptions):
         ingress=None,
         secrets=None,
         retry=None,
-        allow_invalid_app_check_token=None,
     ):
         super().__init__()
         self.reference = reference or GLOBAL_OPTIONS.reference
@@ -302,10 +318,6 @@ class ReferenceOptions(GlobalOptions):
         self.vpc = vpc or GLOBAL_OPTIONS.vpc
         self.secrets = secrets or GLOBAL_OPTIONS.secrets
         self.retry = retry or False
-        self.allow_invalid_app_check_token = (
-            allow_invalid_app_check_token
-            or GLOBAL_OPTIONS.allow_invalid_app_check_token
-        )
 
 
 def set_global_options(
@@ -319,7 +331,7 @@ def set_global_options(
     max_instances: Union[None, int, Sentinel] = None,
     concurrency: Union[None, int, Sentinel] = None,
     cpu: Union[None, int, str, Sentinel] = "gcf_gen1",
-    vpc_connector_egress_settings: Union[None, int, VpcEgressSettings, Sentinel] = None,
+    vpc_connector_egress_settings: Union[None, VpcEgressSettings, Sentinel] = None,
     vpc: Union[None, VpcOptions, Sentinel] = None,
     ingress: Union[None, IngressSettings, Sentinel] = None,
     service_account: Union[None, str, Sentinel] = None,
@@ -329,8 +341,7 @@ def set_global_options(
     ] = None,  # TODO should we add Sentinel?
     allowed_methods: Union[
         StringParam, str, None
-    ] = None,  # TODO should we add Sentinel?
-    allow_invalid_app_check_token: Union[StringParam, str, None] = None
+    ] = None  # TODO should we add Sentinel?
 ):
     global GLOBAL_OPTIONS
     GLOBAL_OPTIONS = GlobalOptions(
@@ -350,5 +361,4 @@ def set_global_options(
         labels=labels,
         allowed_origins=allowed_origins,
         allowed_methods=allowed_methods,
-        allow_invalid_app_check_token=allow_invalid_app_check_token,
     )

@@ -1,11 +1,10 @@
-"""Overall utils for Firebase functions"""
+"""Utils for Firebase Functions"""
 
 from typing import Generic, TypeVar, Optional
 from dataclasses import dataclass
 import datetime as dt
 from functions_framework import logging
 from flask import Request
-
 
 T = TypeVar("T")
 
@@ -25,12 +24,8 @@ class CloudEvent(Generic[T]):
 
 def valid_request(request: Request) -> bool:
     """Validate request"""
-    if (
-        valid_content(request)
-        and valid_keys(request)
-        and valid_type(request)
-        and valid_body(request)
-    ):
+    if (valid_content(request) and valid_keys(request) and
+            valid_type(request) and valid_body(request)):
         return True
     return False
 
@@ -73,7 +68,7 @@ def valid_content(request: Request) -> bool:
         return False
 
     # The body must have data.
-    if request.json["data"] is None:
+    if request.json is None or request.json["data"] is None:
         # TODO should we check if data exists or not?
         logging.warning("Request body is missing data.", request.json)
         return False
@@ -82,6 +77,7 @@ def valid_content(request: Request) -> bool:
 
 def valid_keys(request: Request) -> bool:
     """Verify that the body does not have any extra fields."""
+    assert request.json is not None
     extra_keys = {
         key: request.json[key] for key in request.json.keys() if key != "data"
     }

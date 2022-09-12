@@ -71,7 +71,7 @@ class DbData(Generic[T]):
     """
 
     publish_time: dt.datetime
-    data: str = None
+    data: Optional[str] = None
     ordering_key: Optional[str] = None
     attributes: Optional[dict[str, str]] = None
 
@@ -169,7 +169,7 @@ def on_value_written(
     concurrency: Union[None, int, options.Sentinel] = None,
     cpu: Union[None, int, str, options.Sentinel] = "gcf_gen1",
     vpc_connector_egress_settings: Union[
-        None, int, options.VpcEgressSettings, options.Sentinel
+        None, options.VpcEgressSettings, options.Sentinel
     ] = None,
     vpc: Union[None, options.VpcOptions, options.Sentinel] = None,
     ingress: Union[None, options.IngressSettings, options.Sentinel] = None,
@@ -259,6 +259,7 @@ def on_value_written(
             minInstances=reference_options.min_instances,
             maxInstances=reference_options.max_instances,
             vpc=reference_options.vpc,
+            vpcConnectorEgressSettings=reference_options.vpc_connector_egress_settings,
             ingressSettings=reference_options.ingress,
             serviceAccount=reference_options.service_account,
             secretEnvironmentVariables=reference_options.secrets,
@@ -288,7 +289,7 @@ def on_value_updated(
     concurrency: Union[None, int, options.Sentinel] = None,
     cpu: Union[None, int, str, options.Sentinel] = "gcf_gen1",
     vpc_connector_egress_settings: Union[
-        None, int, options.VpcEgressSettings, options.Sentinel
+        None, options.VpcEgressSettings, options.Sentinel
     ] = None,
     vpc: Union[None, options.VpcOptions, options.Sentinel] = None,
     ingress: Union[None, options.IngressSettings, options.Sentinel] = None,
@@ -372,7 +373,7 @@ def on_value_created(
     concurrency: Union[None, int, options.Sentinel] = None,
     cpu: Union[None, int, str, options.Sentinel] = "gcf_gen1",
     vpc_connector_egress_settings: Union[
-        None, int, options.VpcEgressSettings, options.Sentinel
+        None, options.VpcEgressSettings, options.Sentinel
     ] = None,
     vpc: Union[None, options.VpcOptions, options.Sentinel] = None,
     ingress: Union[None, options.IngressSettings, options.Sentinel] = None,
@@ -461,6 +462,7 @@ def on_value_created(
             minInstances=reference_options.min_instances,
             maxInstances=reference_options.max_instances,
             vpc=reference_options.vpc,
+            vpcConnectorEgressSettings=reference_options.vpc_connector_egress_settings,
             ingressSettings=reference_options.ingress,
             serviceAccount=reference_options.service_account,
             secretEnvironmentVariables=reference_options.secrets,
@@ -490,7 +492,7 @@ def on_value_deleted(
     concurrency: Union[None, int, options.Sentinel] = None,
     cpu: Union[None, int, str, options.Sentinel] = "gcf_gen1",
     vpc_connector_egress_settings: Union[
-        None, int, options.VpcEgressSettings, options.Sentinel
+        None, options.VpcEgressSettings, options.Sentinel
     ] = None,
     vpc: Union[None, options.VpcOptions, options.Sentinel] = None,
     ingress: Union[None, options.IngressSettings, options.Sentinel] = None,

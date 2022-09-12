@@ -22,7 +22,6 @@ from firebase_admin import auth, _apps
 
 from flask import Request, Response, jsonify
 
-
 from functions_framework import logging
 
 from firebase_functions.errors import FunctionsErrorCode, HttpsError
@@ -41,6 +40,7 @@ from firebase_functions.options import (
     Memory,
     VpcOptions,
     IngressSettings,
+    VpcEgressSettings,
     Sentinel,
 )
 from firebase_functions.utils import valid_request
@@ -156,9 +156,11 @@ def on_request(
     min_instances: Union[None, IntParam, int, Sentinel] = None,
     max_instances: Union[None, IntParam, int, Sentinel] = None,
     vpc: Union[None, VpcOptions, Sentinel] = None,
+    vpc_connector_egress_settings: Union[None, VpcEgressSettings, Sentinel] = None,
     ingress: Union[None, IngressSettings, Sentinel] = None,
     service_account: Union[None, StringParam, StringParam, Sentinel] = None,
     secrets: Union[List[StringParam], SecretParam, Sentinel, None] = None,
+    invoker: Union[None, str, list[str]] = None,
 ) -> Callable[[Request], None]:
     """Decorator for a function that handles raw HTTPS requests.
 
@@ -196,14 +198,17 @@ def on_request(
         min_instances=min_instances,
         max_instances=max_instances,
         vpc=vpc,
+        vpc_connector_egress_settings=vpc_connector_egress_settings,
         ingress=ingress,
         service_account=service_account,
         secrets=secrets,
+        invoker=invoker,
     )
 
     trigger = {} if request_options is None else request_options.metadata()
 
     def wrapper(func):
+
         @functools.wraps(func)
         def request_view_func(request: Request, response: Response) -> Response:
             func(request, response)
@@ -211,13 +216,14 @@ def on_request(
 
         endpoint = ManifestEndpoint(
             entryPoint=func.__name__,
-            httpsTrigger=HttpsTrigger(),
+            httpsTrigger=HttpsTrigger(invoker=request_options.invoker),
             region=request_options.region,
             availableMemoryMb=request_options.memory,
             timeoutSeconds=request_options.timeout_sec,
             minInstances=request_options.min_instances,
             maxInstances=request_options.max_instances,
             vpc=request_options.vpc,
+            vpcConnectorEgressSettings=request_options.vpc_connector_egress_settings,
             ingressSettings=request_options.ingress,
             serviceAccount=request_options.service_account,
             secretEnvironmentVariables=request_options.secrets,
@@ -329,7 +335,8 @@ def check_tokens(
     if len(errs) == 0:
         logging.info("Callable request verification passed", log_payload)
     else:
-        logging.warning(f"Callable request verification failed: ${errs}", log_payload)
+        logging.warning(f"Callable request verification failed: ${errs}",
+                        log_payload)
 
     # Clears out the content in the logPayload
     # or it will be persisted in the next call.
@@ -361,13 +368,13 @@ def wrap_on_call_handler(
         token_status = check_tokens(request, context)
 
         if token_status.auth == TokenStatus.INVALID:
-            raise HttpsError(FunctionsErrorCode.UNAUTHENTICATED, "Unauthenticated")
+            raise HttpsError(FunctionsErrorCode.UNAUTHENTICATED,
+                             "Unauthenticated")
 
-        if (
-            token_status.app == TokenStatus.INVALID
-            and not options.allow_invalid_app_check_token
-        ):
-            raise HttpsError(FunctionsErrorCode.UNAUTHENTICATED, "Unauthenticated")
+        if (token_status.app == TokenStatus.INVALID and
+                not options.allow_invalid_app_check_token):
+            raise HttpsError(FunctionsErrorCode.UNAUTHENTICATED,
+                             "Unauthenticated")
 
         instance_id = request.headers.get("Firebase-Instance-ID-Token")
         if instance_id is not None:
@@ -377,7 +384,8 @@ def wrap_on_call_handler(
             # pushes with FCM. In that case, the FCM APIs will validate the token.
             context = dataclasses.replace(
                 context,
-                instance_id_token=request.headers.get("Firebase-Instance-ID-Token"),
+                instance_id_token=request.headers.get(
+                    "Firebase-Instance-ID-Token"),
             )
 
         data = json.loads(request.data)
@@ -419,9 +427,13 @@ def on_call(
     min_instances: Union[None, IntParam, int, Sentinel] = None,
     max_instances: Union[None, IntParam, int, Sentinel] = None,
     vpc: Union[None, VpcOptions, Sentinel] = None,
+    vpc_connector_egress_settings: Union[
+        None, VpcEgressSettings, Sentinel
+    ] = None,
     ingress: Union[None, IngressSettings, Sentinel] = None,
     service_account: Union[None, StringParam, str, Sentinel] = None,
     secrets: Union[List[StringParam], SecretParam, Sentinel, None] = None,
+    invoker: Optional[Union[str, list[str]]] = None
 ) -> Callable[[CallableRequest], Any]:
     """Decorator for a function that can be called like an RPC service.
 
@@ -457,14 +469,17 @@ def on_call(
         min_instances=min_instances,
         max_instances=max_instances,
         vpc=vpc,
+        vpc_connector_egress_settings=vpc_connector_egress_settings,
         ingress=ingress,
         service_account=service_account,
         secrets=secrets,
+        invoker=invoker,
     )
 
     trigger = {} if callable_options is None else callable_options.metadata()
 
     def wrapper(func):
+
         @functools.wraps(func)
         def call_view_func(request: Request):
             return wrap_on_call_handler(
@@ -476,13 +491,14 @@ def on_call(
 
         manifest = ManifestEndpoint(
             entryPoint=func.__name__,
-            callableTrigger=CallableTrigger(),
+            callableTrigger=CallableTrigger(invoker=callable_options.invoker),
             region=callable_options.region,
             availableMemoryMb=callable_options.memory,
             timeoutSeconds=callable_options.timeout_sec,
             minInstances=callable_options.min_instances,
             maxInstances=callable_options.max_instances,
             vpc=callable_options.vpc,
+            vpcConnectorEgressSettings=callable_options.vpc_connector_egress_settings,
             ingressSettings=callable_options.ingress,
             serviceAccount=callable_options.service_account,
             secretEnvironmentVariables=callable_options.secrets,
