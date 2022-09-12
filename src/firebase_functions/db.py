@@ -114,7 +114,6 @@ def db_wrap_handler(
 
     # pylint: disable=protected-access
     event_dict = {"data": raw.data, **raw._attributes}
-    print(event_dict)
 
     data = event_dict["data"]
     message_dict = data["data"]
