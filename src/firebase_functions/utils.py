@@ -49,6 +49,8 @@ class PathSegment(Generic[T]):
 
 
 class Segmant(PathSegment):
+    """Segment of a path"""
+
     name: SegmantName = "segment"
 
     def __init__(self, value: str) -> None:
@@ -63,6 +65,7 @@ class Segmant(PathSegment):
 
 
 class SingleCaptureSegment(PathSegment):
+    """Segment of a path with a single capture. e.g. {*}"""
     name: SegmantName = "single-capture"
 
     def __init__(self, value: str) -> None:
@@ -77,6 +80,7 @@ class SingleCaptureSegment(PathSegment):
 
 
 class MultiCaptureSegment(PathSegment):
+    """Segment of a path with a multi capture. e.g. {**}"""
     name: SegmantName = "multi-capture"
 
     def __init__(self, value: str) -> None:
@@ -105,12 +109,11 @@ class PathPattern:
         return self.raw
 
     def has_wildcards(self) -> bool:
-        return any(segment.is_single_segment_wildcard() or segment.is_multi_segment_wildcard()
+        return any(segment.is_multi_segment_wildcard() or segment.is_multi_segment_wildcard()
                    for segment in self.segments)
 
     def has_captures(self) -> bool:
-        return any(segment.name == "single-capture" or segment.name == "multi-capture"
-                   for segment in self.segments)
+        return any(segment.name in ("single-capture", "multi-capture") for segment in self.segments)
 
     def init_path_segmants(self, raw: str) -> None:
         parts = path_parts(raw)
