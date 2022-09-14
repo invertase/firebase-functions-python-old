@@ -25,10 +25,10 @@ class CloudEvent(Generic[T]):
     data: T
 
 
-SegmantName = Literal["segment", "single-capture", "multi-capture"]
+SegmentName = Literal["segment", "single-capture", "multi-capture"]
 
 
-def trim_params(param: str) -> str:
+def trim_param(param: str) -> str:
     """Trim params"""
     param_no_braces = param[1:-1]
     if "=" in param_no_braces:
@@ -37,7 +37,7 @@ def trim_params(param: str) -> str:
 
 
 class PathSegment(Generic[T]):
-    name: SegmantName
+    name: SegmentName
     value: str
     trimmed: str
 
@@ -48,10 +48,10 @@ class PathSegment(Generic[T]):
         pass
 
 
-class Segmant(PathSegment):
+class Segment(PathSegment):
     """Segment of a path"""
 
-    name: SegmantName = "segment"
+    name: SegmentName = "segment"
 
     def __init__(self, value: str) -> None:
         super().__init__()
@@ -66,11 +66,11 @@ class Segmant(PathSegment):
 
 class SingleCaptureSegment(PathSegment):
     """Segment of a path with a single capture. e.g. {*}"""
-    name: SegmantName = "single-capture"
+    name: SegmentName = "single-capture"
 
     def __init__(self, value: str) -> None:
         super().__init__()
-        self.trimmed = trim_params(value)
+        self.trimmed = trim_param(value)
 
     def is_single_segment_wildcard(self) -> bool:
         return True
@@ -81,11 +81,11 @@ class SingleCaptureSegment(PathSegment):
 
 class MultiCaptureSegment(PathSegment):
     """Segment of a path with a multi capture. e.g. {**}"""
-    name: SegmantName = "multi-capture"
+    name: SegmentName = "multi-capture"
 
     def __init__(self, value: str) -> None:
         super().__init__()
-        self.trimmed = trim_params(value)
+        self.trimmed = trim_param(value)
 
     def is_single_segment_wildcard(self) -> bool:
         return False
@@ -103,7 +103,7 @@ class PathPattern:
     def __init__(self, raw: str):
         self.raw = raw
         self.segments = []
-        self.init_path_segmants(raw)
+        self.init_path_segments(raw)
 
     def get_value(self) -> str:
         return self.raw
@@ -115,29 +115,29 @@ class PathPattern:
     def has_captures(self) -> bool:
         return any(segment.name in ("single-capture", "multi-capture") for segment in self.segments)
 
-    def init_path_segmants(self, raw: str) -> None:
+    def init_path_segments(self, raw: str) -> None:
         parts = path_parts(raw)
         for part in parts:
-            segmant: PathSegment
+            segment: PathSegment
             capture = re.findall(WILDCARD_CAPTURE_REGEX, part)
             if capture and len(capture) == 1:
-                segmant = MultiCaptureSegment(part) if "**" in part else SingleCaptureSegment(part)
+                segment = MultiCaptureSegment(part) if "**" in part else SingleCaptureSegment(part)
             else:
-                segmant = Segmant(part)
-            self.segments.append(segmant)
+                segment = Segment(part)
+            self.segments.append(segment)
 
     def extract_matches(self, path: str) -> dict[str, str]:
         """Extract matches"""
         matches: dict[str, str] = {}
         if not self.has_captures():
             return matches
-        path_segmants = path_parts(path)
-        for i, part in enumerate(path_segmants):
+        path_segments = path_parts(path)
+        for i, part in enumerate(path_segments):
             segment = self.segments[i]
             if segment.is_single_segment_wildcard():
                 matches[segment.trimmed] = part
             elif segment.is_multi_segment_wildcard():
-                matches[segment.trimmed] = "/".join(path_segmants[i:i + 1])
+                matches[segment.trimmed] = "/".join(path_segments[i:i + 1])
         return matches
 
 
