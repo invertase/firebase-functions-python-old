@@ -20,19 +20,13 @@ class Expression(ABC, Generic[T]):
         """
         Returns the Expression's runtime value, based on the CLI's resolution of params.
         """
-        raise NotImplementedError
+        raise NotImplementedError()
 
     def to_cel(self) -> str:
         """
         Returns the Expression's representation as a braced CEL expression.
         """
         return f"{{ {self} }}"
-
-    def to_json(self) -> str:
-        """
-        Returns the Expression's representation as a JSON serializable string.
-        """
-        return str(self)
 
 
 def _quote_if_string(literal: T) -> T:
@@ -334,7 +328,7 @@ class ListParam(Param[list]):
 
     def value(self) -> list[str]:
         if os.environ.get(self.name) is not None:
-            return os.environ[self.name].split(",")
+            return list(filter(len, os.environ[self.name].split(",")))
         if self.default is not None:
             return self.default
         return []

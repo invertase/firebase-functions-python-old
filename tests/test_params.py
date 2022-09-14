@@ -97,3 +97,30 @@ class TestStringParams:
         assert (params.StringParam("string_default_test", default="string_override_default").value()
                 == "string_override_default"), \
             'Failure, params default value != "string_override_default"'
+
+
+class TestListParams:
+    """ListParam unit tests."""
+
+    def test_list_param_value(self):
+        """Testing if list param correctly returns list values."""
+        environ["list_value_test"] = "item1,item2"
+        assert params.ListParam("list_value_test").value() == ["item1","item2"], \
+            'Failure, params value != ["item1","item2"]'
+
+    def test_list_param_filter_empty_strings(self):
+        """Testing if list param correctly returns list values wth empty strings excluded."""
+        environ["list_value_test"] = ",,item1,item2,,,item3,"
+        assert params.ListParam("list_value_test").value() == ["item1","item2", "item3"], \
+            'Failure, params value != ["item1","item2", "item3"]'
+
+    def test_list_param_empty_default(self):
+        """Testing if list param defaults to an empty list if no value and no default."""
+        assert params.ListParam("list_default_test").value() == [], \
+            "Failure, params value is not an empty list"
+
+    def test_list_param_default(self):
+        """Testing if list param defaults to the provided default value."""
+        assert (params.ListParam("list_default_test", default=["1", "2"]).value()
+                == ["1", "2"]), \
+            'Failure, params default value != ["1", "2"]'
