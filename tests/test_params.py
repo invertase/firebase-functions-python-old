@@ -37,6 +37,15 @@ class TestBoolParams:
         assert (params.BoolParam("bool_default_test", default=True).value() is
                 True), "Failure, params returned False"
 
+    def test_bool_param_equality(self):
+        """Test bool equality."""
+        assert (params.BoolParam("bool_test",
+                                 default=False).equals(False).value() is
+                True), "Failure, equality check returned False"
+        assert (params.BoolParam("bool_test",
+                                 default=True).equals(False).value() is
+                False), "Failure, equality check returned False"
+
 
 class TesFloatParams:
     """FloatParam unit tests."""
@@ -56,6 +65,15 @@ class TesFloatParams:
         """Testing if float param defaults to provided default value."""
         assert params.FloatParam("float_default_test", default=float(456.789)).value() == 456.789, \
             "Failure, params default value != 456.789"
+
+    def test_float_param_equality(self):
+        """Test float equality."""
+        assert (params.FloatParam("float_test",
+                                  default=123.456).equals(123.456).value() is
+                True), "Failure, equality check returned False"
+        assert (params.FloatParam("float_test",
+                                  default=456.789).equals(123.456).value() is
+                False), "Failure, equality check returned False"
 
 
 class TestIntParams:
@@ -77,6 +95,13 @@ class TestIntParams:
         assert params.IntParam("int_default_test", default=456).value() == 456, \
             "Failure, params default value != 456"
 
+    def test_int_param_equality(self):
+        """Test int equality."""
+        assert (params.IntParam("int_test", default=123).equals(123).value() is
+                True), "Failure, equality check returned False"
+        assert (params.IntParam("int_test", default=456).equals(123).value() is
+                False), "Failure, equality check returned False"
+
 
 class TestStringParams:
     """StringParam unit tests."""
@@ -97,6 +122,15 @@ class TestStringParams:
         assert (params.StringParam("string_default_test", default="string_override_default").value()
                 == "string_override_default"), \
             'Failure, params default value != "string_override_default"'
+
+    def test_string_param_equality(self):
+        """Test string equality."""
+        assert (params.StringParam("string_test",
+                                   default="123").equals("123").value() is
+                True), "Failure, equality check returned False"
+        assert (params.StringParam("string_test",
+                                   default="456").equals("123").value() is
+                False), "Failure, equality check returned False"
 
 
 class TestListParams:
@@ -124,3 +158,10 @@ class TestListParams:
         assert (params.ListParam("list_default_test", default=["1", "2"]).value()
                 == ["1", "2"]), \
             'Failure, params default value != ["1", "2"]'
+
+    def test_list_param_equality(self):
+        """Test list equality."""
+        assert (params.ListParam("list_test", default=["123"]).equals(
+            ["123"]).value() is True), "Failure, equality check returned False"
+        assert (params.ListParam("list_test", default=["456"]).equals(
+            ["123"]).value() is False), "Failure, equality check returned False"
