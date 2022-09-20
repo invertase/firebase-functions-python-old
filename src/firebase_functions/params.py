@@ -178,8 +178,6 @@ class Param(Expression[T]):
     The type of input that is required for this param, e.g. TextInput.
     """
 
-    type: str = "string"
-
     def value(self) -> T:
         raise NotImplementedError()
 
@@ -191,17 +189,6 @@ class Param(Expression[T]):
 
     def __str__(self) -> str:
         return f"params.{self.name}"
-
-    def to_spec(self) -> dict:
-        return {
-            "name": self.name,
-            "default": self.default,
-            "label": self.label,
-            "description": self.description,
-            "immutable": self.immutable,
-            # TODO spec representation of inputs
-            "type": self.type,
-        }
 
 
 @dataclass(frozen=True)
@@ -231,8 +218,6 @@ class SecretParam(Expression[str]):
     deployments.
     """
 
-    type: str = "secret"
-
     def __str__(self):
         return f"{{{{ params.{self.name} }}}}"
 
@@ -246,21 +231,10 @@ class SecretParam(Expression[str]):
     def equals(self, right: T) -> CompareExpression:
         return self.compare("==", right)
 
-    def to_spec(self) -> dict:
-        return {
-            "name": self.name,
-            "label": self.label,
-            "description": self.description,
-            "immutable": self.immutable,
-            "type": self.type,
-        }
-
 
 @dataclass(frozen=True)
 class StringParam(Param):
     """A parameter as a string value."""
-
-    type = "string"
 
     def value(self) -> str:
         if os.environ.get(self.name) is not None:
@@ -276,13 +250,9 @@ class StringParam(Param):
 class IntParam(Param[int]):
     """A parameter as a int value."""
 
-    type = "int"
-
     def value(self) -> int:
         if os.environ.get(self.name) is not None:
             return int(os.environ[self.name])
-        if isinstance(self.default, Expression):
-            return self.default.value()
         if self.default is not None:
             return self.default
         return int()
@@ -291,7 +261,6 @@ class IntParam(Param[int]):
 @dataclass(frozen=True)
 class FloatParam(Param[float]):
     """A parameter as a float value."""
-    type = "float"
 
     def value(self) -> float:
         if os.environ.get(self.name) is not None:
@@ -304,8 +273,6 @@ class FloatParam(Param[float]):
 @dataclass(frozen=True)
 class BoolParam(Param[bool]):
     """A parameter as a bool value."""
-
-    type = "boolean"
 
     def value(self) -> bool:
         env_value = os.environ.get(self.name)
@@ -324,20 +291,12 @@ class BoolParam(Param[bool]):
 class ListParam(Param[list]):
     """A parameter as a list of strings."""
 
-    type = "list"
-
     def value(self) -> list[str]:
         if os.environ.get(self.name) is not None:
             return list(filter(len, os.environ[self.name].split(",")))
         if self.default is not None:
             return self.default
         return []
-
-    def to_spec(self) -> dict:
-        out = self.to_spec()
-        if self.default is not None:
-            out["default"] = ",".join(self.default)
-        return out
 
 
 PROJECT_ID = StringParam("GCLOUD_PROJECT",

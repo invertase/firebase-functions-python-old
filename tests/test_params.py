@@ -47,7 +47,7 @@ class TestBoolParams:
                 False), "Failure, equality check returned False"
 
 
-class TesFloatParams:
+class TestFloatParams:
     """FloatParam unit tests."""
 
     def test_float_param_value(self):
